@@ -53,9 +53,9 @@ local karDisposition =
 
 	tTargetPrimary =
 	{
-		[Unit.CodeEnumDisposition.Hostile] 	= "CRB_VikingNameplates:sprNP_BaseSelectedRed",
-		[Unit.CodeEnumDisposition.Neutral] 	= "CRB_VikingNameplates:sprNP_BaseSelectedYellow",
-		[Unit.CodeEnumDisposition.Friendly] = "CRB_VikingNameplates:sprNP_BaseSelectedGreen",
+		[Unit.CodeEnumDisposition.Hostile] 	= "CRB_Nameplates:sprNP_BaseSelectedRed",
+		[Unit.CodeEnumDisposition.Neutral] 	= "CRB_Nameplates:sprNP_BaseSelectedYellow",
+		[Unit.CodeEnumDisposition.Friendly] = "CRB_Nameplates:sprNP_BaseSelectedGreen",
 	},
 
 	tTargetSecondary =
@@ -336,7 +336,7 @@ function VikingNameplates:OnRestore(eType, tSavedData)
 end
 
 function VikingNameplates:OnWindowManagementReady()
-	Event_FireGenericEvent("WindowManagementAdd", {wnd = self.wndMain, strName = Apollo.GetString("VikingNameplates_Options")})
+	Event_FireGenericEvent("WindowManagementAdd", {wnd = self.wndMain, strName = Apollo.GetString("Nameplates_Options")})
 end
 
 function VikingNameplates:CreateUnitsFromPreload()
@@ -621,7 +621,7 @@ function VikingNameplates:DrawName(tNameplate)
 		
 		if wndName:GetText() ~= strNewName then
 			local wndNameRewardContainer = tNameplate.wnd.nameRewardContainer
-			local nNameWidth = Apollo.GetTextWidth("VikingNameplates", strNewName)
+			local nNameWidth = Apollo.GetTextWidth("Nameplates", strNewName)
 			local nHalfNameWidth = math.ceil(nNameWidth / 2)
 			
 			-- Rewards also depend on name
@@ -651,7 +651,7 @@ function VikingNameplates:DrawGuild(tNameplate)
 	
 	local strNewGuild = unitOwner:GetAffiliationName()
 	if unitOwner:GetType() == "Player" and strNewGuild ~= nil and strNewGuild ~= "" then
-		strNewGuild = String_GetWeaselString(Apollo.GetString("VikingNameplates_GuildDisplay"), strNewGuild)
+		strNewGuild = String_GetWeaselString(Apollo.GetString("Nameplates_GuildDisplay"), strNewGuild)
 	end
 	
 	if strNewGuild ~= wndGuild:GetText() then
@@ -772,13 +772,13 @@ function VikingNameplates:DrawRewards(tNameplate)
 	end
 end
 
-function VikingNameplates:DrawTargeting(tVikingNameplates)
+function VikingNameplates:DrawTargeting(tNameplates)
 	local wndNameplate = tNameplate.wndNameplate
 	local unitOwner = tNameplate.unitOwner
 
 	local bUseTarget = tNameplate.bIsTarget
 	
-	local bShowTargetMarkerArrow = bUseTarget and self.bShowMarkerTarget and not tVikingNameplates.wnd.health:IsShown()
+	local bShowTargetMarkerArrow = bUseTarget and self.bShowMarkerTarget and not tNameplates.wnd.health:IsShown()
 	tNameplate.wnd.targetMarkerArrow:SetSprite(karDisposition.tTargetSecondary[tNameplate.eDisposition])
 	tNameplate.wnd.targetMarker:SetSprite(karDisposition.tTargetPrimary[tNameplate.eDisposition])
 
@@ -982,7 +982,7 @@ function VikingNameplates:HelperDoHealthShieldBar(wndHealth, unitOwner, eDisposi
 
 	-- Sprite
 	if nVulnerabilityTime and nVulnerabilityTime > 0 then
-		tNameplate.wnd.healthMaxHealth:SetSprite("CRB_VikingNameplates:sprNP_PurpleProg")
+		tNameplate.wnd.healthMaxHealth:SetSprite("CRB_Nameplates:sprNP_PurpleProg")
 	else
 		tNameplate.wnd.healthMaxHealth:SetSprite(karDisposition.tHealthBar[eDisposition])
 	end
@@ -1226,10 +1226,10 @@ end
 -- Options
 -----------------------------------------------------------------------------------------------
 function VikingNameplates:OnConfigure()
-	self:OnVikingNameplatesOn()
+	self:OnNameplatesOn()
 end
 
-function VikingNameplates:OnVikingNameplatesOn()
+function VikingNameplates:OnNameplatesOn()
 	local ePath = PlayerPathLib.GetPlayerPathType()
 	self.wndOptionsMain:FindChild("ShowRewardTypeMission"):FindChild("Icon"):SetSprite(karPathSprite[ePath])
 	self.wndMain:Show(true)
@@ -1250,7 +1250,7 @@ function VikingNameplates:RefreshNameplatesConfigure()
 	--Draw distance
 	if self.nMaxRange ~= nil then
 		self.wndOptionsMain:FindChild("ShowOptionsBacker:DrawDistanceSlider"):SetValue(self.nMaxRange)
-		self.wndOptionsMain:FindChild("ShowOptionsBacker:DrawDistanceLabel"):SetText(String_GetWeaselString(Apollo.GetString("VikingNameplates_DrawDistance"), self.nMaxRange))
+		self.wndOptionsMain:FindChild("ShowOptionsBacker:DrawDistanceLabel"):SetText(String_GetWeaselString(Apollo.GetString("Nameplates_DrawDistance"), self.nMaxRange))
 	end
 	--Info panel
 	if self.bShowHealthMain ~= nil and self.bShowHealthMainDamaged ~= nil then self.wndMain:FindChild("MainShowHealthBarAlways"):SetCheck(self.bShowHealthMain and not self.bShowHealthMainDamaged) end
@@ -1282,7 +1282,7 @@ function VikingNameplates:OnCancel()
 end
 
 function VikingNameplates:OnDrawDistanceSlider(wndNameplate, wndHandler, nValue, nOldvalue)
-	self.wndOptionsMain:FindChild("DrawDistanceLabel"):SetText(String_GetWeaselString(Apollo.GetString("VikingNameplates_DrawDistance"), nValue))
+	self.wndOptionsMain:FindChild("DrawDistanceLabel"):SetText(String_GetWeaselString(Apollo.GetString("Nameplates_DrawDistance"), nValue))
 	self.nMaxRange = nValue-- set new constant, apply math
 end
 
