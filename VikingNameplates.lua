@@ -26,6 +26,7 @@ local VikingNameplates = {}
 
 -- TODO Delete strings:
 -- VikingNameplates_GuildDisplay
+--Done, Crowdedlight
 
 -----------------------------------------------------------------------------------------------
 -- Constants
