@@ -835,7 +835,8 @@ function VikingNameplates:HelperVerifyVisibilityOptions(tNameplate)
 		return false
 	end
 	
-	if tNameplate.bGibbed or tNameplate.bSpeechBubble then
+	-- removed: "or tNameplate.bSpeechBubble" to see if it looks better with nameplates on while they have speech bubbles
+	if tNameplate.bGibbed then
 		return false
 	end
 	
