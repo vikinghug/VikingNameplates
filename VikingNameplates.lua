@@ -711,7 +711,6 @@ end
 
 function VikingNameplates:ToggleNamePlatesVisiblity(tNameplate, bShow)
   tNameplate.wnd.background:Show(bShow)
-  tNameplate.wnd.name:Show(bShow)
   tNameplate.wnd.health:Show(bShow)
 end
 
