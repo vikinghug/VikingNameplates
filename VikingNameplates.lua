@@ -24,9 +24,6 @@ require "GuildTypeLib"
 
 local VikingNameplates = {}
 
--- TODO Delete strings:
--- VikingNameplates_GuildDisplay
-
 -----------------------------------------------------------------------------------------------
 -- Constants
 -----------------------------------------------------------------------------------------------
@@ -59,9 +56,9 @@ local karDisposition =
 
   tTargetPrimary =
   {
-    [Unit.CodeEnumDisposition.Hostile]  = "CRB_VikingNameplates:sprNP_BaseSelectedRed",
-    [Unit.CodeEnumDisposition.Neutral]  = "CRB_VikingNameplates:sprNP_BaseSelectedYellow",
-    [Unit.CodeEnumDisposition.Friendly] = "CRB_VikingNameplates:sprNP_BaseSelectedGreen",
+    [Unit.CodeEnumDisposition.Hostile]  = "CRB_Nameplates:sprNP_BaseSelectedRed",
+    [Unit.CodeEnumDisposition.Neutral]  = "CRB_Nameplates:sprNP_BaseSelectedYellow",
+    [Unit.CodeEnumDisposition.Friendly] = "CRB_Nameplates:sprNP_BaseSelectedGreen",
   },
 
   tTargetSecondary =
@@ -73,9 +70,9 @@ local karDisposition =
 
   tHealthBar =
   {
-    [Unit.CodeEnumDisposition.Hostile]  = "CRB_VikingNameplates:sprNP_RedProg",
-    [Unit.CodeEnumDisposition.Neutral]  = "CRB_VikingNameplates:sprNP_YellowProg",
-    [Unit.CodeEnumDisposition.Friendly] = "CRB_VikingNameplates:sprNP_GreenProg",
+    [Unit.CodeEnumDisposition.Hostile]  = "CRB_Nameplates:sprNP_RedProg",
+    [Unit.CodeEnumDisposition.Neutral]  = "CRB_Nameplates:sprNP_YellowProg",
+    [Unit.CodeEnumDisposition.Friendly] = "CRB_Nameplates:sprNP_GreenProg",
   },
 
   tHealthTextColor =
@@ -633,7 +630,10 @@ function VikingNameplates:DrawName(tNameplate)
 
     if wndName:GetText() ~= strNewName then
       local wndNameRewardContainer = tNameplate.wnd.nameRewardContainer
-      local nNameWidth = Apollo.GetTextWidth("VikingNameplates", strNewName)
+      
+      -- Test what outcome replacing VikingNamePlates with Nameplate have?
+
+      local nNameWidth = Apollo.GetTextWidth("VikingNamePlates", strNewName)
       local nHalfNameWidth = math.ceil(nNameWidth / 2)
 
       -- Rewards also depend on name
@@ -787,13 +787,13 @@ function VikingNameplates:DrawRewards(tNameplate)
   end
 end
 
-function VikingNameplates:DrawTargeting(tVikingNameplates)
+function VikingNameplates:DrawTargeting(tNameplate)
   local wndNameplate = tNameplate.wndNameplate
   local unitOwner = tNameplate.unitOwner
 
   local bUseTarget = tNameplate.bIsTarget
 
-  local bShowTargetMarkerArrow = bUseTarget and self.bShowMarkerTarget and not tVikingNameplates.wnd.health:IsShown()
+  local bShowTargetMarkerArrow = bUseTarget and self.bShowMarkerTarget and not tNameplate.wnd.health:IsShown()
   tNameplate.wnd.targetMarkerArrow:SetSprite(karDisposition.tTargetSecondary[tNameplate.eDisposition])
   tNameplate.wnd.targetMarkerArrow:Show(bShowTargetMarkerArrow, not bShowTargetMarkerArrow)
 end
@@ -1362,5 +1362,5 @@ end
 -----------------------------------------------------------------------------------------------
 -- VikingNameplates Instance
 -----------------------------------------------------------------------------------------------
-local VikingNameplatesInst = VikingNameplates:new()
-VikingNameplatesInst:Init()
+local NameplatesInst = VikingNameplates:new()
+NameplatesInst:Init()
