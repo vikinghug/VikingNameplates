@@ -166,6 +166,7 @@ local karSavedProperties =
   ["bShowCastBarMain"] = { default=false, nControlType=1, strControlName="IndividualShowCastBar" },
   ["bShowRewardsMain"] = { default=true, nControlType=1, strControlName="IndividualShowRewardIcons", fnCallback="UpdateAllNameplateRewards" },
   ["bShowThreatIndicator"] = { default=false, nControlType=1, strControlName="IndividualShowThreatIndicator", fnCallback="OnSettingThreatIndicatorChanged" },
+  ["bShowInterrupt"] = { default=false, nControlType=1, strControlName="IndividualShowInterrupt", fnCallback="OnSettingInterruptChanged" },
   --Reward icons
   ["bShowRewardTypeQuest"] = { default=true, nControlType=1, strControlName="ShowRewardTypeQuest", fnCallback="UpdateAllNameplateRewards" },
   ["bShowRewardTypeMission"] = { default=true, nControlType=1, strControlName="ShowRewardTypeMission", fnCallback="UpdateAllNameplateRewards" },
@@ -259,6 +260,7 @@ function VikingNameplates:OnDocumentReady()
   Apollo.RegisterEventHandler("UnitMemberOfGuildChange",    "OnUnitMemberOfGuildChange", self)
   Apollo.RegisterEventHandler("GuildChange",          "OnGuildChange", self)
   Apollo.RegisterEventHandler("UnitGibbed",         "OnUnitGibbed", self)
+  Apollo.RegisterEventHandler("CombatLogModifyInterruptArmor", "OnInterruptChange",  self)
 
   local tRewardUpdateEvents = {
     "QuestObjectiveUpdated", "QuestStateChanged", "ChallengeAbandon", "ChallengeLeftArea",
@@ -483,7 +485,8 @@ function VikingNameplates:OnUnitCreated(unitNew) -- build main options here
       vulnerableVulnFill = wnd:FindChild("Container:Vulnerable:VulnFill"),
       questRewards = wnd:FindChild("NameRewardContainer:RewardContainer:QuestRewards"),
       targetMarkerArrow = wnd:FindChild("TargetAndDeathContainer:TargetMarkerArrow"),
-      threatIndicator = wnd:FindChild("ThreatIndicatorContainer:ThreatIndicatorMarker")
+      threatIndicator = wnd:FindChild("ThreatIndicatorContainer:ThreatIndicatorMarker"),
+      interrupt = wnd:FindChild("InterruptContainer:InterruptMarker")
     }
   end
 
@@ -496,6 +499,7 @@ function VikingNameplates:OnUnitCreated(unitNew) -- build main options here
   self:UpdateNameplateRewardInfo(tNameplate)
   self:DrawRewards(tNameplate)
   self:DrawThreatIndicator(tNameplate)
+  self:DrawInterrupt(tNameplate)
 end
 
 function VikingNameplates:OnUnitDestroyed(unitOwner)
@@ -552,6 +556,7 @@ function VikingNameplates:DrawNameplate(tNameplate)
   self:DrawVulnerable(tNameplate)
   self:ColorNameplate(tNameplate)
   self:DrawThreatIndicator(tNameplate)
+  self:DrawInterrupt(tNameplate)
 end
 
 function VikingNameplates:ColorNameplate(tNameplate)
@@ -809,6 +814,21 @@ function VikingNameplates:DrawThreatIndicator(tNameplate)
   local bTargetAlive = unitOwner:GetHealth() ~= 0
   
   tNameplate.wnd.threatIndicator:Show(bShow and bHasThreat and bTargetAlive)
+end
+
+function VikingNameplates:DrawInterrupt(tNameplate)
+  local wndNameplate = tNameplate.wndNameplate
+  local unitOwner = tNameplate.unitOwner
+  local bShow = self.bShowInterrupt
+  local nArmorValue = unitOwner:GetInterruptArmorValue() or 0
+  local nMaxArmor = unitOwner:GetInterruptArmorMax() or 0
+
+  if bShow and nMaxArmor >= 1 then
+    tNameplate.wnd.interrupt:SetText(nArmorValue)
+    tNameplate.wnd.interrupt:Show(true)
+  else
+    tNameplate.wnd.interrupt:Show(false)
+  end
 end
 
 function VikingNameplates:CheckDrawDistance(tNameplate)
@@ -1375,6 +1395,12 @@ end
 function VikingNameplates:OnSettingThreatIndicatorChanged()
   for idx, tNameplate in pairs(self.arUnit2Nameplate) do
     self:DrawThreatIndicator(tNameplate)
+  end
+end
+
+function VikingNameplates:OnSettingInterruptChanged()
+  for idx, tNameplate in pairs(self.arUnit2Nameplate) do
+    self:DrawInterrupt(tNameplate)
   end
 end
 
