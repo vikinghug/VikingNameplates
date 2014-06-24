@@ -1018,7 +1018,6 @@ function VikingNameplates:HelperDoHealthShieldBar(wndHealth, unitOwner, eDisposi
 
   if unitOwner:IsInCCState(Unit.CodeEnumCCState.Vulnerability) then
     healthColor = ApolloColor.new(.957, .267, .80, 1)
-    --tColors.lightPurple
 
   elseif nHealthCurr / nHealthMax <= knHealthRed then
     healthColor = tColors.red
