@@ -209,7 +209,13 @@ function VikingNameplates:new(o)
 end
 
 function VikingNameplates:Init()
-    Apollo.RegisterAddon(self, true, nil, {"Tooltips", "RewardIcons"})
+  local tDependencies = {
+    "VikingLibrary",
+    "Tooltips",
+    "RewardIcons"
+  }
+
+  Apollo.RegisterAddon(self, true, "", tDependencies)
 end
 
 function VikingNameplates:OnDependencyError(strDependency, strError)
@@ -225,8 +231,6 @@ function VikingNameplates:OnLoad()
 
   self.xmlDoc = XmlDoc.CreateFromFile("VikingNameplates.xml")
   self.xmlDoc:RegisterCallback("OnDocumentReady", self)
-
-  Apollo.LoadSprites("VikingNameplatesSprites.xml")
 end
 
 function VikingNameplates:OnPreloadUnitCreated(unitNew)

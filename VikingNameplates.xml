@@ -294,7 +294,7 @@
                 </Control>
                 <Control Class="Window" LAnchorPoint="0" LAnchorOffset="6" TAnchorPoint="0" TAnchorOffset="-3" RAnchorPoint="1" RAnchorOffset="-45" BAnchorPoint="1" BAnchorOffset="-31" RelativeToClient="1" Font="CRB_InterfaceTiny_BB" Text="" Template="Default" Name="HealthLabel" BGColor="white" TextColor="white" DT_CENTER="0" DT_VCENTER="0" TooltipColor="" NewControlDepth="1" Visible="0" Tooltip="" IgnoreMouse="1" TextId="Challenges_NoProgress" DT_BOTTOM="0"/>
             </Control>
-            <Control Class="Window" LAnchorPoint="0" LAnchorOffset="0" TAnchorPoint="0" TAnchorOffset="-2" RAnchorPoint="1" RAnchorOffset="0" BAnchorPoint="0" BAnchorOffset="4" RelativeToClient="1" Font="Default" Text="" Template="Default" Name="BackgroundContainer" BGColor="99141122" TextColor="white" IgnoreMouse="1" Sprite="VikingNameplatesSprites:Gradient128" Picture="1" Visible="0" TooltipColor="" HideInEditor="0" Tooltip="" NoClip="1">
+            <Control Class="Window" LAnchorPoint="0" LAnchorOffset="0" TAnchorPoint="0" TAnchorOffset="-2" RAnchorPoint="1" RAnchorOffset="0" BAnchorPoint="0" BAnchorOffset="4" RelativeToClient="1" Font="Default" Text="" Template="Default" Name="BackgroundContainer" BGColor="99141122" TextColor="white" IgnoreMouse="1" Sprite="VikingLibrarySprites:Gradient128" Picture="1" Visible="0" TooltipColor="" HideInEditor="0" Tooltip="" NoClip="1">
                 <Control Class="Window" LAnchorPoint="0" LAnchorOffset="0" TAnchorPoint="0" TAnchorOffset="0" RAnchorPoint="1" RAnchorOffset="0" BAnchorPoint="1" BAnchorOffset="0" RelativeToClient="1" Font="Default" Text="" BGColor="992b273d" TextColor="UI_WindowTextDefault" Template="Default" TooltipType="OnCursor" Name="Backer" TooltipColor="" Picture="1" IgnoreMouse="1" Sprite="BasicSprites:WhiteFill"/>
             </Control>
             <Control Class="Window" LAnchorPoint="0" LAnchorOffset="0" TAnchorPoint="1" TAnchorOffset="-26" RAnchorPoint="1" RAnchorOffset="0" BAnchorPoint="1" BAnchorOffset="-24" RelativeToClient="1" Font="CRB_Pixel_O" Text="" Template="Default" Name="CastBar" BGColor="992b273d" TextColor="white" Visible="0" TextId="" Picture="1" IgnoreMouse="1" Sprite="BasicSprites:WhiteFill" TooltipColor="">
@@ -307,5 +307,4 @@
             </Control>
         </Control>
     </Form>
-    <SpriteFile Name="VikingNameplatesSprites.xml"/>
 </Forms>
