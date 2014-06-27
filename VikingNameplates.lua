@@ -217,7 +217,7 @@ function VikingNameplates:Init()
     "RewardIcons"
   }
 
-  Apollo.RegisterAddon(self, true, "", tDependencies)
+  Apollo.RegisterAddon(self, true, "VikingNameplates", tDependencies)
 end
 
 function VikingNameplates:OnDependencyError(strDependency, strError)
