@@ -321,6 +321,7 @@ function VikingNameplates:OnDocumentReady()
   wndTemp:Destroy()
 
   self:CreateUnitsFromPreload()
+
 end
 
 function VikingNameplates:OnSave(eType)
@@ -532,6 +533,7 @@ function VikingNameplates:OnFrame()
   for idx, tNameplate in pairs(self.arUnit2Nameplate) do
     self:DrawNameplate(tNameplate)
   end
+
 end
 
 function VikingNameplates:DrawNameplate(tNameplate)
@@ -1003,15 +1005,16 @@ function VikingNameplates:HelperDoHealthShieldBar(wndHealth, unitOwner, eDisposi
   self:SetBarValue(wndShield, 0, nShieldCurr, nShieldMax)
   self:SetBarValue(wndAbsorb, 0, nAbsorbCurr, nAbsorbMax)
 
-  local nBackgroundMin        = 4
-  local nBackgroundRow        = 5
+  local nBackgroundStartY     = -18
+  local nBackgroundMin        = 14
+  local nBackgroundRow        = 10
   local nBackgroundMultiplier = 0
   if nShieldCurr > 0 then
     nBackgroundMultiplier = 1
   elseif nShieldCurr > 0 and nAbsorbMax > 0 then
     nBackgroundMultiplier = 2
   end
-  tNameplate.wnd.background:SetAnchorOffsets(0, 0, 0, nBackgroundMin + (nBackgroundRow * nBackgroundMultiplier))
+  tNameplate.wnd.background:SetAnchorOffsets(0, nBackgroundStartY, 0, nBackgroundMin + (nBackgroundRow * nBackgroundMultiplier))
 
   -- Bars
   tNameplate.wnd.healthMaxHealth:Show(nHealthCurr > 0)
@@ -1020,14 +1023,25 @@ function VikingNameplates:HelperDoHealthShieldBar(wndHealth, unitOwner, eDisposi
 
   local healthColor = tColors.green
 
-  if unitOwner:IsInCCState(Unit.CodeEnumCCState.Vulnerability) then
-    healthColor = tColors.lightPurple
+  local eDisposition = unitOwner:GetDispositionTo(self.unitPlayer)
 
-  elseif nHealthCurr / nHealthMax <= knHealthRed then
+  if eDisposition == 0 then -- hostile
     healthColor = tColors.red
-  elseif nHealthCurr / nHealthMax <= knHealthYellow then
+  elseif eDisposition == 1 then -- neutral
     healthColor = tColors.yellow
+  elseif eDisposition == 2 then -- friendly
+    healthColor = tColors.green
   end
+
+  -- if unitOwner:IsInCCState(Unit.CodeEnumCCState.Vulnerability) then
+    -- healthColor = tColors.lightPurple
+
+  -- elseif nHealthCurr / nHealthMax <= knHealthRed then
+  --   healthColor = tColors.red
+  -- elseif nHealthCurr / nHealthMax <= knHealthYellow then
+  --   healthColor = tColors.yellow
+  -- end
+
 
   wndHealth:SetBarColor(healthColor)
 
