@@ -474,6 +474,7 @@ function VikingNameplates:OnUnitCreated(unitNew) -- build main options here
       background = wnd:FindChild("Container:BackgroundContainer"),
       castBar = wnd:FindChild("Container:CastBar"),
       vulnerable = wnd:FindChild("Container:Vulnerable"),
+      level = wnd:FindChild("Container:Health:Level"),
       guild = wnd:FindChild("Guild"),
       name = wnd:FindChild("NameRewardContainer:Name"),
       certainDeath = wnd:FindChild("TargetAndDeathContainer:CertainDeath"),
@@ -501,7 +502,7 @@ function VikingNameplates:OnUnitCreated(unitNew) -- build main options here
 
   self:DrawName(tNameplate)
   self:DrawGuild(tNameplate)
-  --self:DrawLevel(tNameplate)
+  self:DrawLevel(tNameplate)
   self:UpdateNameplateRewardInfo(tNameplate)
   self:DrawRewards(tNameplate)
   self:DrawThreatIndicator(tNameplate)
@@ -819,7 +820,6 @@ function VikingNameplates:DrawThreatIndicator(tNameplate)
   local bHasThreat = unitOwner:GetTarget() == self.unitPlayer
   local bIsAlive = not unitOwner:IsDead()
   local bIsPlayer = unitOwner:GetType() == "Player"
-
   tNameplate.wnd.threatIndicator:Show(bShow and bHasThreat and bIsAlive and not bIsPlayer)
 end
 
@@ -837,7 +837,7 @@ function VikingNameplates:DrawInterrupt(tNameplate)
   if not bShow or not bDisplayIfDamage then
     tNameplate.wnd.interrupt:Show(false)
     return
-  end 
+  end
 
   if nMaxArmor == 0 or nArmorValue == nil or bIsDead then
       tNameplate.wnd.interrupt:Show(false)
