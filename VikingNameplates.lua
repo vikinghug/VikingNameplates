@@ -27,6 +27,10 @@ local VikingNameplates = {}
 -- TODO Delete strings:
 -- VikingNameplates_GuildDisplay
 
+-- Disabled DrawLevel as it isn't currently being used
+-- Disabled castBarLabel as it isn't currently being used
+-- Disabled healthHealthLabel as it isn't currently being used
+
 -----------------------------------------------------------------------------------------------
 -- Constants
 -----------------------------------------------------------------------------------------------
@@ -251,7 +255,6 @@ function VikingNameplates:OnDocumentReady()
   Apollo.RegisterEventHandler("UnitCreated",          "OnUnitCreated", self)
   Apollo.RegisterEventHandler("UnitDestroyed",        "OnUnitDestroyed", self)
   Apollo.RegisterEventHandler("VarChange_FrameCount",     "OnFrame", self)
-
   Apollo.RegisterEventHandler("UnitTextBubbleCreate",     "OnUnitTextBubbleToggled", self)
   Apollo.RegisterEventHandler("UnitTextBubblesDestroyed",   "OnUnitTextBubbleToggled", self)
   Apollo.RegisterEventHandler("TargetUnitChanged",      "OnTargetUnitChanged", self)
@@ -260,11 +263,10 @@ function VikingNameplates:OnDocumentReady()
   Apollo.RegisterEventHandler("UnitTitleChanged",       "OnUnitTitleChanged", self)
   Apollo.RegisterEventHandler("PlayerTitleChange",      "OnPlayerTitleChanged", self)
   Apollo.RegisterEventHandler("UnitGuildNameplateChanged",  "OnUnitGuildNameplateChanged",self)
-  Apollo.RegisterEventHandler("UnitLevelChanged",       "OnUnitLevelChanged", self)
+  --Apollo.RegisterEventHandler("UnitLevelChanged",       "OnUnitLevelChanged", self)
   Apollo.RegisterEventHandler("UnitMemberOfGuildChange",    "OnUnitMemberOfGuildChange", self)
   Apollo.RegisterEventHandler("GuildChange",          "OnGuildChange", self)
   Apollo.RegisterEventHandler("UnitGibbed",         "OnUnitGibbed", self)
-  Apollo.RegisterEventHandler("CombatLogModifyInterruptArmor", "OnInterruptChange",  self)
 
   local tRewardUpdateEvents = {
     "QuestObjectiveUpdated", "QuestStateChanged", "ChallengeAbandon", "ChallengeLeftArea",
@@ -321,6 +323,7 @@ function VikingNameplates:OnDocumentReady()
   wndTemp:Destroy()
 
   self:CreateUnitsFromPreload()
+
 end
 
 function VikingNameplates:OnSave(eType)
@@ -483,14 +486,14 @@ function VikingNameplates:OnUnitCreated(unitNew) -- build main options here
       healthMaxAbsorb = wnd:FindChild("Container:Health:HealthBars:MaxAbsorb"),
       healthAbsorbFill = wnd:FindChild("Container:Health:HealthBars:MaxAbsorb:AbsorbFill"),
       healthMaxHealth = wnd:FindChild("Container:Health:HealthBars:MaxHealth"),
-      healthHealthLabel = wnd:FindChild("Container:Health:HealthLabel"),
-      castBarLabel = wnd:FindChild("Container:CastBar:Label"),
+      --healthHealthLabel = wnd:FindChild("Container:Health:HealthLabel"),
+      --castBarLabel = wnd:FindChild("Container:CastBar:Label"),
       castBarCastFill = wnd:FindChild("Container:CastBar:CastFill"),
       vulnerableVulnFill = wnd:FindChild("Container:Vulnerable:VulnFill"),
       questRewards = wnd:FindChild("NameRewardContainer:RewardContainer:QuestRewards"),
       targetMarkerArrow = wnd:FindChild("TargetAndDeathContainer:TargetMarkerArrow"),
-      threatIndicator = wnd:FindChild("ThreatIndicatorContainer:ThreatIndicatorMarker"),
-      interrupt = wnd:FindChild("InterruptContainer:InterruptMarker")
+      threatIndicator = wnd:FindChild("Container:ThreatIndicatorContainer:ThreatIndicatorMarker"),
+      interrupt = wnd:FindChild("Container:InterruptContainer:InterruptMarker")
     }
   end
 
@@ -532,6 +535,7 @@ function VikingNameplates:OnFrame()
   for idx, tNameplate in pairs(self.arUnit2Nameplate) do
     self:DrawNameplate(tNameplate)
   end
+
 end
 
 function VikingNameplates:DrawNameplate(tNameplate)
@@ -617,7 +621,7 @@ function VikingNameplates:ColorNameplate(tNameplate)
     crLevelColorToUse = kcrDeadColor
   end
 
-  tNameplate.wnd.level:SetTextColor(crLevelColorToUse)
+  --tNameplate.wnd.level:SetTextColor(crLevelColorToUse)
   tNameplate.wnd.name:SetTextColor(crColorToUse)
   tNameplate.wnd.guild:SetTextColor(crColorToUse)
 end
@@ -743,7 +747,7 @@ function VikingNameplates:DrawCastBar(tNameplate)
 
   wndCastBar:Show(bShow)
   if bShow then
-    tNameplate.wnd.castBarLabel:SetText(unitOwner:GetCastName())
+    --tNameplate.wnd.castBarLabel:SetText(unitOwner:GetCastName())
     tNameplate.wnd.castBarCastFill:SetMax(unitOwner:GetCastDuration())
     tNameplate.wnd.castBarCastFill:SetProgress(unitOwner:GetCastElapsed())
   end
@@ -811,27 +815,42 @@ function VikingNameplates:DrawTargeting(tVikingNameplates)
 end
 
 function VikingNameplates:DrawThreatIndicator(tNameplate)
-  local wndNameplate = tNameplate.wndNameplate
   local unitOwner = tNameplate.unitOwner
   local bShow = self.bShowThreatIndicator
   local bHasThreat = unitOwner:GetTarget() == self.unitPlayer
-  local bTargetAlive = unitOwner:GetHealth() ~= 0
-  
-  tNameplate.wnd.threatIndicator:Show(bShow and bHasThreat and bTargetAlive)
+  local bIsAlive = not unitOwner:IsDead()
+  local bIsPlayer = unitOwner:GetType() == "Player"
+  tNameplate.wnd.threatIndicator:Show(bShow and bHasThreat and bIsAlive and not bIsPlayer)
 end
 
 function VikingNameplates:DrawInterrupt(tNameplate)
-  local wndNameplate = tNameplate.wndNameplate
   local unitOwner = tNameplate.unitOwner
+  local nArmorValue = unitOwner:GetInterruptArmorValue()
+  local nMaxArmor = unitOwner:GetInterruptArmorMax()
   local bShow = self.bShowInterrupt
-  local nArmorValue = unitOwner:GetInterruptArmorValue() or 0
-  local nMaxArmor = unitOwner:GetInterruptArmorMax() or 0
+  local bInfinite = nMaxArmor == -1
+  local bHasArmor = nArmorValue > 0
+  local bIsDead = unitOwner:IsDead()
+  local bDisplayIfDamage = self.bShowHealthMainDamaged
+  local bPlayerIsDamaged = unitOwner:GetHealth() ~= unitOwner:GetMaxHealth()
 
-  if bShow and nMaxArmor >= 1 then
-    tNameplate.wnd.interrupt:SetText(nArmorValue)
-    tNameplate.wnd.interrupt:Show(true)
-  else
+  if not bShow or not bDisplayIfDamage then
     tNameplate.wnd.interrupt:Show(false)
+    return
+  end
+
+  if nMaxArmor == 0 or nArmorValue == nil or bIsDead then
+      tNameplate.wnd.interrupt:Show(false)
+    else
+      tNameplate.wnd.interrupt:Show(true)
+      if nMaxArmor == -1 then
+        tNameplate.wnd.interrupt:SetTextColor("xkcdPastelOrange")
+        tNameplate.wnd.interrupt:SetText("X")
+      elseif nArmorValue == 0 and nMaxArmor > 0 then
+        tNameplate.wnd.interrupt:SetText("0")
+      elseif nMaxArmor > 0 then
+        tNameplate.wnd.interrupt:SetText(nArmorValue)
+      end
   end
 end
 
@@ -961,7 +980,7 @@ function VikingNameplates:HelperDoHealthShieldBar(wndHealth, unitOwner, eDisposi
   local nVulnerabilityTime = unitOwner:GetCCStateTimeRemaining(Unit.CodeEnumCCState.Vulnerability)
 
   if unitOwner:GetType() == "Simple" or unitOwner:GetHealth() == nil then
-    tNameplate.wnd.healthHealthLabel:SetText("")
+    --tNameplate.wnd.healthHealthLabel:SetText("")
     return
   end
 
@@ -1003,15 +1022,16 @@ function VikingNameplates:HelperDoHealthShieldBar(wndHealth, unitOwner, eDisposi
   self:SetBarValue(wndShield, 0, nShieldCurr, nShieldMax)
   self:SetBarValue(wndAbsorb, 0, nAbsorbCurr, nAbsorbMax)
 
-  local nBackgroundMin        = 4
-  local nBackgroundRow        = 5
+  local nBackgroundStartY     = -18
+  local nBackgroundMin        = 14
+  local nBackgroundRow        = 10
   local nBackgroundMultiplier = 0
   if nShieldCurr > 0 then
     nBackgroundMultiplier = 1
   elseif nShieldCurr > 0 and nAbsorbMax > 0 then
     nBackgroundMultiplier = 2
   end
-  tNameplate.wnd.background:SetAnchorOffsets(0, 0, 0, nBackgroundMin + (nBackgroundRow * nBackgroundMultiplier))
+  tNameplate.wnd.background:SetAnchorOffsets(0, nBackgroundStartY, 0, nBackgroundMin + (nBackgroundRow * nBackgroundMultiplier))
 
   -- Bars
   tNameplate.wnd.healthMaxHealth:Show(nHealthCurr > 0)
@@ -1020,14 +1040,25 @@ function VikingNameplates:HelperDoHealthShieldBar(wndHealth, unitOwner, eDisposi
 
   local healthColor = tColors.green
 
-  if unitOwner:IsInCCState(Unit.CodeEnumCCState.Vulnerability) then
-    healthColor = tColors.lightPurple
+  local eDisposition = unitOwner:GetDispositionTo(self.unitPlayer)
 
-  elseif nHealthCurr / nHealthMax <= knHealthRed then
+  if eDisposition == 0 then -- hostile
     healthColor = tColors.red
-  elseif nHealthCurr / nHealthMax <= knHealthYellow then
+  elseif eDisposition == 1 then -- neutral
     healthColor = tColors.yellow
+  elseif eDisposition == 2 then -- friendly
+    healthColor = tColors.green
   end
+
+  -- if unitOwner:IsInCCState(Unit.CodeEnumCCState.Vulnerability) then
+    -- healthColor = tColors.lightPurple
+
+  -- elseif nHealthCurr / nHealthMax <= knHealthRed then
+  --   healthColor = tColors.red
+  -- elseif nHealthCurr / nHealthMax <= knHealthYellow then
+  --   healthColor = tColors.yellow
+  -- end
+
 
   wndHealth:SetBarColor(healthColor)
 
@@ -1041,7 +1072,7 @@ function VikingNameplates:HelperDoHealthShieldBar(wndHealth, unitOwner, eDisposi
   if nShieldMax > 0 and nShieldCurr > 0 then
     strText = String_GetWeaselString(Apollo.GetString("TargetFrame_HealthShieldText"), strText, strShieldCurr)
   end
-  tNameplate.wnd.healthHealthLabel:SetText(strText)
+  --tNameplate.wnd.healthHealthLabel:SetText(strText)
 
   --[[
   elseif nHealthCurr / nHealthMax < .3 then
@@ -1243,7 +1274,7 @@ function VikingNameplates:OnTargetUnitChanged(unitOwner) -- build targeted optio
     if bIsTarget or bIsCluster then
       self:DrawName(tNameplateOther)
       self:DrawGuild(tNameplateOther)
-      self:DrawLevel(tNameplateOther)
+      --self:DrawLevel(tNameplateOther)
       self:UpdateNameplateRewardInfo(tNameplateOther)
     end
   end
@@ -1261,7 +1292,7 @@ function VikingNameplates:OnTargetUnitChanged(unitOwner) -- build targeted optio
     tNameplate.bIsTarget = true
     self:DrawName(tNameplate)
     self:DrawGuild(tNameplate)
-    self:DrawLevel(tNameplate)
+    --self:DrawLevel(tNameplate)
     self:UpdateNameplateRewardInfo(tNameplate)
 
     local tCluster = unitOwner:GetClusterUnits()
