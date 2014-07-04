@@ -170,7 +170,7 @@ local karSavedProperties =
   ["bShowCastBarMain"] = { default=false, nControlType=1, strControlName="IndividualShowCastBar" },
   ["bShowRewardsMain"] = { default=true, nControlType=1, strControlName="IndividualShowRewardIcons", fnCallback="UpdateAllNameplateRewards" },
   ["bShowThreatIndicator"] = { default=false, nControlType=1, strControlName="IndividualShowThreatIndicator", fnCallback="OnSettingThreatIndicatorChanged" },
-  ["bShowInterrupt"] = { default=true, nControlType=1, strControlName="IndividualShowInterrupt", fnCallback="OnSettingInterruptChanged" },
+  ["bShowInterrupt"] = { default=false, nControlType=1, strControlName="IndividualShowInterrupt", fnCallback="OnSettingInterruptChanged" },
   --Reward icons
   ["bShowRewardTypeQuest"] = { default=true, nControlType=1, strControlName="ShowRewardTypeQuest", fnCallback="UpdateAllNameplateRewards" },
   ["bShowRewardTypeMission"] = { default=true, nControlType=1, strControlName="ShowRewardTypeMission", fnCallback="UpdateAllNameplateRewards" },
