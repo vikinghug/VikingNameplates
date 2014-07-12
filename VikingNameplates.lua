@@ -854,7 +854,6 @@ function VikingNameplates:DrawInterrupt(tNameplate)
   end
 end
 
-
 function VikingNameplates:CheckDrawDistance(tNameplate)
   local unitPlayer = self.unitPlayer
   local unitOwner = tNameplate.unitOwner
