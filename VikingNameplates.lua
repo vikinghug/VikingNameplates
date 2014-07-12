@@ -354,7 +354,7 @@ function VikingNameplates:OnRestore(eType, tSavedData)
 end
 
 function VikingNameplates:OnWindowManagementReady()
-  Event_FireGenericEvent("WindowManagementAdd", {wnd = self.wndMain, strName = Apollo.GetString("Nameplates_Options")})
+  Event_FireGenericEvent("WindowManagementAdd", {wnd = self.wndMain, strName = "Viking Nameplates"})
 end
 
 function VikingNameplates:CreateUnitsFromPreload()
