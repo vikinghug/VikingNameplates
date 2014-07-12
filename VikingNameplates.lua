@@ -854,6 +854,7 @@ function VikingNameplates:DrawInterrupt(tNameplate)
   end
 end
 
+
 function VikingNameplates:CheckDrawDistance(tNameplate)
   local unitPlayer = self.unitPlayer
   local unitOwner = tNameplate.unitOwner
@@ -862,10 +863,10 @@ function VikingNameplates:CheckDrawDistance(tNameplate)
       return false
   end
 
-  tPosTarget = unitOwner:GetPosition()
-  tPosPlayer = unitPlayer:GetPosition()
+  local tPosTarget = unitOwner:GetPosition()
+  local tPosPlayer = unitPlayer:GetPosition()
 
-  if tPosTarget == nil then
+  if tPosTarget == nil or tPosPlayer == nil then
     return
   end
 
