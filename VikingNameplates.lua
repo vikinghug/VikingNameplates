@@ -1,1446 +1,682 @@
------------------------------------------------------------------------------------------------
--- Client Lua Script for VikingNameplates
--- Copyright (c) NCsoft. All rights reserved
------------------------------------------------------------------------------------------------
-
 require "Window"
-require "ChallengesLib"
 require "Unit"
 require "GameLib"
 require "Apollo"
-require "PathMission"
-require "Quest"
-require "Episode"
-require "math"
-require "string"
-require "DialogSys"
-require "PublicEvent"
-require "PublicEventObjective"
-require "CommunicatorLib"
-require "GroupLib"
-require "PlayerPathLib"
-require "GuildLib"
-require "GuildTypeLib"
+require "ApolloColor"
+require "Window"
 
-local VikingNameplates = {}
+local VikingLib
+local VikingNameplates = {
+  _VERSION = 'VikingNameplates.lua 0.1.0',
+  _URL     = 'https://github.com/vikinghug/VikingNameplates',
+  _DESCRIPTION = '',
+  _LICENSE = [[
+    MIT LICENSE
 
--- TODO Delete strings:
--- VikingNameplates_GuildDisplay
+    Copyright (c) 2014 Kevin Altman
 
--- Disabled DrawLevel as it isn't currently being used
--- Disabled castBarLabel as it isn't currently being used
--- Disabled healthHealthLabel as it isn't currently being used
+    Permission is hereby granted, free of charge, to any person obtaining a
+    copy of this software and associated documentation files (the
+    "Software"), to deal in the Software without restriction, including
+    without limitation the rights to use, copy, modify, merge, publish,
+    distribute, sublicense, and/or sell copies of the Software, and to
+    permit persons to whom the Software is furnished to do so, subject to
+    the following conditions:
 
------------------------------------------------------------------------------------------------
--- Constants
------------------------------------------------------------------------------------------------
+    The above copyright notice and this permission notice shall be included
+    in all copies or substantial portions of the Software.
 
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+    OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+    IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+    CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+    TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+    SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+  ]]
+}
 
-local knHealthRed                      = 0.3
-local knHealthYellow                   = 0.5
+-- GameLib.CodeEnumClass.Warrior      = 1
+-- GameLib.CodeEnumClass.Engineer     = 2
+-- GameLib.CodeEnumClass.Esper        = 3
+-- GameLib.CodeEnumClass.Medic        = 4
+-- GameLib.CodeEnumClass.Stalker      = 5
+-- GameLib.CodeEnumClass.Spellslinger = 7
 
-local tColors = {
-  black       = ApolloColor.new("ff201e2d"),
-  white       = ApolloColor.new("ffffffff"),
-  lightGrey   = ApolloColor.new("ffbcb7da"),
-  green       = ApolloColor.new("cc06ff5e"),
-  yellow      = ApolloColor.new("ffffd161"),
-  lightPurple = ApolloColor.new("ff645f7e"),
-  purple      = ApolloColor.new("ff28253a"),
-  red         = ApolloColor.new("ffe05757"),
-  blue        = ApolloColor.new("cc49e8ee")
+local tClassName = {
+  [GameLib.CodeEnumClass.Warrior]      = "Warrior",
+  [GameLib.CodeEnumClass.Engineer]     = "Engineer",
+  [GameLib.CodeEnumClass.Esper]        = "Esper",
+  [GameLib.CodeEnumClass.Medic]        = "Medic",
+  [GameLib.CodeEnumClass.Stalker]      = "Stalker",
+  [GameLib.CodeEnumClass.Spellslinger] = "Spellslinger"
 }
 
 
-local karDisposition =
+local tClassToSpriteMap =
 {
-  tTextColors =
-  {
-    [Unit.CodeEnumDisposition.Hostile]  = tColors.red,
-    [Unit.CodeEnumDisposition.Neutral]  = tColors.lightGrey,
-    [Unit.CodeEnumDisposition.Friendly] = tColors.green,
-  },
-
-  tTargetPrimary =
-  {
-    [Unit.CodeEnumDisposition.Hostile]  = "CRB_VikingNameplates:sprNP_BaseSelectedRed",
-    [Unit.CodeEnumDisposition.Neutral]  = "CRB_VikingNameplates:sprNP_BaseSelectedYellow",
-    [Unit.CodeEnumDisposition.Friendly] = "CRB_VikingNameplates:sprNP_BaseSelectedGreen",
-  },
-
-  tTargetSecondary =
-  {
-    [Unit.CodeEnumDisposition.Hostile]  = "sprNp_Target_HostileSecondary",
-    [Unit.CodeEnumDisposition.Neutral]  = "sprNp_Target_NeutralSecondary",
-    [Unit.CodeEnumDisposition.Friendly] = "sprNp_Target_FriendlySecondary",
-  },
-
-  tHealthBar =
-  {
-    [Unit.CodeEnumDisposition.Hostile]  = "CRB_VikingNameplates:sprNP_RedProg",
-    [Unit.CodeEnumDisposition.Neutral]  = "CRB_VikingNameplates:sprNP_YellowProg",
-    [Unit.CodeEnumDisposition.Friendly] = "CRB_VikingNameplates:sprNP_GreenProg",
-  },
-
-  tHealthTextColor =
-  {
-    [Unit.CodeEnumDisposition.Hostile]  = tColors.red,
-    [Unit.CodeEnumDisposition.Neutral]  = tColors.lightGrey,
-    [Unit.CodeEnumDisposition.Friendly] = tColors.green,
-  },
+  [GameLib.CodeEnumClass.Warrior]       = "VikingSprites:ClassWarrior",
+  [GameLib.CodeEnumClass.Engineer]      = "VikingSprites:ClassEngineer",
+  [GameLib.CodeEnumClass.Esper]         = "VikingSprites:ClassEsper",
+  [GameLib.CodeEnumClass.Medic]         = "VikingSprites:ClassMedic",
+  [GameLib.CodeEnumClass.Stalker]       = "VikingSprites:ClassStalker",
+  [GameLib.CodeEnumClass.Spellslinger]  = "VikingSprites:ClassSpellslinger"
 }
 
 
-local ktHealthBarSprites =
+local tRankToSpriteMap = {
+  [Unit.CodeEnumRank.Elite]    = "spr_TargetFrame_ClassIcon_Elite",
+  [Unit.CodeEnumRank.Superior] = "spr_TargetFrame_ClassIcon_Superior",
+  [Unit.CodeEnumRank.Champion] = "spr_TargetFrame_ClassIcon_Champion",
+  [Unit.CodeEnumRank.Standard] = "spr_TargetFrame_ClassIcon_Standard",
+  [Unit.CodeEnumRank.Minion]   = "spr_TargetFrame_ClassIcon_Minion",
+  [Unit.CodeEnumRank.Fodder]   = "spr_TargetFrame_ClassIcon_Fodder"
+}
+
+
+local tTargetMarkSpriteMap =
 {
-  "sprNp_Health_FillGreen",
-  "sprNp_Health_FillOrange",
-  "sprNp_Health_FillRed"
+  "Icon_Windows_UI_CRB_Marker_Bomb",
+  "Icon_Windows_UI_CRB_Marker_Ghost",
+  "Icon_Windows_UI_CRB_Marker_Mask",
+  "Icon_Windows_UI_CRB_Marker_Octopus",
+  "Icon_Windows_UI_CRB_Marker_Pig",
+  "Icon_Windows_UI_CRB_Marker_Chicken",
+  "Icon_Windows_UI_CRB_Marker_Toaster",
+  "Icon_Windows_UI_CRB_Marker_UFO"
 }
 
-local karConColors =  -- differential value, color
-{
-  {-4, ApolloColor.new("ConTrivial")},
-  {-3, ApolloColor.new("ConInferior")},
-  {-2, ApolloColor.new("ConMinor")},
-  {-1, ApolloColor.new("ConEasy")},
-  {0, ApolloColor.new("ConAverage")},
-  {1, ApolloColor.new("ConModerate")},
-  {2, ApolloColor.new("ConTough")},
-  {3, ApolloColor.new("ConHard")},
-  {4, ApolloColor.new("ConImpossible")}
-}
 
-local kcrScalingHex   = "ffffbf80"
-local kcrScalingCColor  = CColor.new(1.0, 191/255, 128/255, 0.7)
-
-local karPathSprite =
-{
-  [PlayerPathLib.PlayerPathType_Soldier]    = "CRB_TargetFrameRewardPanelSprites:sprTargetFrame_PathSol",
-  [PlayerPathLib.PlayerPathType_Settler]    = "CRB_TargetFrameRewardPanelSprites:sprTargetFrame_PathSet",
-  [PlayerPathLib.PlayerPathType_Scientist]  = "CRB_TargetFrameRewardPanelSprites:sprTargetFrame_PathSci",
-  [PlayerPathLib.PlayerPathType_Explorer]   = "CRB_TargetFrameRewardPanelSprites:sprTargetFrame_PathExp",
-}
-
-local knCharacterWidth    = 8 -- the average width of a character in the font used. TODO: Not this.
-local knRewardWidth     = 23 -- the width of a reward icon + padding
-local knTextHeight      = 15 -- text window height
-local knNameRewardWidth   = 400 -- the width of the name/reward container
-local knNameRewardHeight  = 20 -- the width of the name/reward container
-local knTargetRange     = 40000 -- the distance^2 that normal nameplates should draw within (max targeting range)
-local knNameplatePoolLimit  = 500 -- the window pool max size
-
--- Todo: break these out onto options
-local kcrUnflaggedGroupmate       = ApolloColor.new("DispositionFriendlyUnflaggedDull")
-local kcrUnflaggedGuildmate       = ApolloColor.new("DispositionGuildmateUnflagged")
-local kcrUnflaggedAlly          = ApolloColor.new("DispositionFriendlyUnflagged")
-local kcrFlaggedAlly          = ApolloColor.new("DispositionFriendly")
-local kcrUnflaggedEnemyWhenUnflagged  = ApolloColor.new("DispositionNeutral")
-local kcrFlaggedEnemyWhenUnflagged    = ApolloColor.new("DispositionPvPFlagMismatch")
-local kcrUnflaggedEnemyWhenFlagged    = ApolloColor.new("DispositionPvPFlagMismatch")
-local kcrFlaggedEnemyWhenFlagged    = ApolloColor.new("DispositionHostile")
-local kcrDeadColor            = ApolloColor.new("crayGray")
-
-local kcrDefaultTaggedColor = ApolloColor.new("crayGray")
-
--- Control types
--- 0 - custom
--- 1 - single check
-
-local karSavedProperties =
-{
-  --General nameplate drawing
-  ["bShowMainObjectiveOnly"] = { default=true, nControlType=1, strControlName="MainShowObjectives" },
-  ["bShowMainGroupOnly"] = { default=true, nControlType=1, strControlName="MainShowGroup" },
-  ["bShowMyNameplate"] = { default=false, nControlType=1, strControlName="MainShowMine" },
-  ["bShowOrganization"] = { default=true, nControlType=1, strControlName="MainShowOrganization" },
-  ["bShowVendor"] = { default=true, nControlType=1, strControlName="MainShowVendors" },
-  ["bShowTaxi"] = { default=true, nControlType=1, strControlName="MainShowTaxis" },
-  ["bShowDispositionHostile"] = { default=true, nControlType=1, strControlName="MainShowDisposition_1" },
-  ["bShowDispositionNeutral"] = { default=false, nControlType=1, strControlName="MainShowDisposition_2" },
-  ["bShowDispositionFriendly"] = { default=false, nControlType=1, strControlName="MainShowDisposition_3" },
-  ["bShowDispositionFriendlyPlayer"] = { default=false, nControlType=1, strControlName="MainShowDisposition_FriendlyPlayer" },
-  ["bUseOcclusion"] = { default=true, nControlType=1, strControlName="MainUseOcclusion" },
-  --Draw distance
-  ["nMaxRange"] = { default=70.0, nControlType=0 },
-  --Individual
-  ["bShowNameMain"] = { default=true, nControlType=1, strControlName="IndividualShowName", fnCallback="OnSettingNameChanged" },
-  ["bShowTitle"] = { default=true, nControlType=1, strControlName="IndividualShowAffiliation", fnCallback="OnSettingTitleChanged" },
-  ["bShowCertainDeathMain"] = { default=true, nControlType=1, strControlName="IndividualShowCertainDeath" },
-  ["bShowCastBarMain"] = { default=false, nControlType=1, strControlName="IndividualShowCastBar" },
-  ["bShowRewardsMain"] = { default=true, nControlType=1, strControlName="IndividualShowRewardIcons", fnCallback="UpdateAllNameplateRewards" },
-  ["bShowThreatIndicator"] = { default=false, nControlType=1, strControlName="IndividualShowThreatIndicator", fnCallback="OnSettingThreatIndicatorChanged" },
-  ["bShowInterrupt"] = { default=false, nControlType=1, strControlName="IndividualShowInterrupt", fnCallback="OnSettingInterruptChanged" },
-  --Reward icons
-  ["bShowRewardTypeQuest"] = { default=true, nControlType=1, strControlName="ShowRewardTypeQuest", fnCallback="UpdateAllNameplateRewards" },
-  ["bShowRewardTypeMission"] = { default=true, nControlType=1, strControlName="ShowRewardTypeMission", fnCallback="UpdateAllNameplateRewards" },
-  ["bShowRewardTypeAchievement"] = { default=false, nControlType=1, strControlName="ShowRewardTypeAchievement", fnCallback="UpdateAllNameplateRewards" },
-  ["bShowRewardTypeChallenge"] = { default=true, nControlType=1, strControlName="ShowRewardTypeChallenge", fnCallback="UpdateAllNameplateRewards" },
-  ["bShowRewardTypeReputation"] = { default=false, nControlType=1, strControlName="ShowRewardTypeReputation", fnCallback="UpdateAllNameplateRewards" },
-  ["bShowRewardTypePublicEvent"] = { default=true, nControlType=1, strControlName="ShowRewardTypePublicEvent", fnCallback="UpdateAllNameplateRewards" },
-  ["bShowRivals"] = { default=true, nControlType=1, strControlName="ShowRewardTypeRival", fnCallback="UpdateAllNameplateRewards" },
-  ["bShowFriends"] = { default=true, nControlType=1, strControlName="ShowRewardTypeFriend", fnCallback="UpdateAllNameplateRewards" },
-  --Info panel
-  ["bShowHealthMain"] = { default=false, nControlType=0, fnCallback="OnSettingHealthChanged" },
-  ["bShowHealthMainDamaged"] = { default=true, nControlType=0, fnCallback="OnSettingHealthChanged" },
-  --target components
-  ["bShowMarkerTarget"] = { default=true, nControlType=1, strControlName="TargetedShowMarker" },
-  ["bShowNameTarget"] = { default=true, nControlType=1, strControlName="TargetedShowName", fnCallback="OnSettingNameChanged" },
-  ["bShowRewardsTarget"] = { default=true, nControlType=1, strControlName="TargetedShowRewards"},
-  ["bShowGuildNameTarget"] = { default=true, nControlType=1, strControlName="TargetedShowGuild", fnCallback="OnSettingTitleChanged" },
-  ["bShowHealthTarget"] = { default=true, nControlType=1, strControlName="TargetedShowHealth", fnCallback="OnSettingHealthChanged" },
-  ["bShowRangeTarget"] = { default=false, nControlType=0 },
-  ["bShowCastBarTarget"] = { default=true, nControlType=1, strControlName="TargetedShowCastBar" },
-  --Non-targeted nameplates in combat
-  ["bHideInCombat"] = { default=false, nControlType=0 }
-}
+local tDefaultSettings
+local tNameplates = {}
 
 function VikingNameplates:new(o)
-    o = o or {}
-    setmetatable(o, self)
-    self.__index = self
-
-  o.arPreloadUnits = {}
-  o.bAddonRestoredOrLoaded = false
-
-  o.arWindowPool = {}
-  o.arUnit2Nameplate = {}
-  o.arWnd2Nameplate = {}
-
-  o.bPlayerInCombat = false
-  o.guildDisplayed = nil
-  o.guildWarParty = nil
-
-    return o
+  o = o or {}
+  setmetatable(o, self)
+  self.__index = self
+  return o
 end
 
 function VikingNameplates:Init()
-  local tDependencies = {
-    "VikingLibrary",
-    "Tooltips",
-    "RewardIcons"
-  }
-
-  Apollo.RegisterAddon(self, true, "VikingNameplates", tDependencies)
+  Apollo.RegisterAddon(self, nil, nil, {"VikingLibrary"})
 end
-
-function VikingNameplates:OnDependencyError(strDependency, strError)
-  return true
-end
-
------------------------------------------------------------------------------------------------
--- VikingNameplates OnLoad
------------------------------------------------------------------------------------------------
 
 function VikingNameplates:OnLoad()
-  Apollo.RegisterEventHandler("UnitCreated",          "OnPreloadUnitCreated", self)
-
   self.xmlDoc = XmlDoc.CreateFromFile("VikingNameplates.xml")
   self.xmlDoc:RegisterCallback("OnDocumentReady", self)
 end
 
-function VikingNameplates:OnPreloadUnitCreated(unitNew)
-  self.arPreloadUnits[unitNew:GetId()] = unitNew
-end
-
 function VikingNameplates:OnDocumentReady()
-  Apollo.RemoveEventHandler("UnitCreated", self)
-
   if self.xmlDoc == nil then
     return
   end
 
-  Apollo.RegisterEventHandler("WindowManagementReady",  "OnWindowManagementReady", self)
+  -- Apollo.RegisterEventHandler("WindowManagementReady"      , "OnWindowManagementReady"      , self)
+  -- Apollo.RegisterEventHandler("WindowManagementUpdate"     , "OnWindowManagementUpdate"     , self)
+  -- Apollo.RegisterEventHandler("TargetUnitChanged"          , "OnTargetUnitChanged"          , self)
+  -- Apollo.RegisterEventHandler("AlternateTargetUnitChanged" , "OnFocusUnitChanged"           , self)
+  -- Apollo.RegisterEventHandler("PlayerLevelChange"          , "OnUnitLevelChange"            , self)
+  -- Apollo.RegisterEventHandler("UnitLevelChanged"           , "OnUnitLevelChange"            , self)
+  Apollo.RegisterEventHandler("VarChange_FrameCount" , "OnFrame"         , self)
+  Apollo.RegisterEventHandler("UnitCreated"          , "OnUnitCreated"   , self)
+  Apollo.RegisterEventHandler("UnitDestroyed"        , "OnUnitDestroyed" , self)
+  -- Apollo.RegisterEventHandler("ChangeWorld"                , "OnWorldChanged"               , self)
 
-  Apollo.RegisterEventHandler("UnitCreated",          "OnUnitCreated", self)
-  Apollo.RegisterEventHandler("UnitDestroyed",        "OnUnitDestroyed", self)
-  Apollo.RegisterEventHandler("VarChange_FrameCount",     "OnFrame", self)
-  Apollo.RegisterEventHandler("UnitTextBubbleCreate",     "OnUnitTextBubbleToggled", self)
-  Apollo.RegisterEventHandler("UnitTextBubblesDestroyed",   "OnUnitTextBubbleToggled", self)
-  Apollo.RegisterEventHandler("TargetUnitChanged",      "OnTargetUnitChanged", self)
-  Apollo.RegisterEventHandler("UnitEnteredCombat",      "OnEnteredCombat", self)
-  Apollo.RegisterEventHandler("UnitNameChanged",        "OnUnitNameChanged", self)
-  Apollo.RegisterEventHandler("UnitTitleChanged",       "OnUnitTitleChanged", self)
-  Apollo.RegisterEventHandler("PlayerTitleChange",      "OnPlayerTitleChanged", self)
-  Apollo.RegisterEventHandler("UnitGuildNameplateChanged",  "OnUnitGuildNameplateChanged",self)
-  --Apollo.RegisterEventHandler("UnitLevelChanged",       "OnUnitLevelChanged", self)
-  Apollo.RegisterEventHandler("UnitMemberOfGuildChange",    "OnUnitMemberOfGuildChange", self)
-  Apollo.RegisterEventHandler("GuildChange",          "OnGuildChange", self)
-  Apollo.RegisterEventHandler("UnitGibbed",         "OnUnitGibbed", self)
-
-  local tRewardUpdateEvents = {
-    "QuestObjectiveUpdated", "QuestStateChanged", "ChallengeAbandon", "ChallengeLeftArea",
-    "ChallengeFailTime", "ChallengeFailArea", "ChallengeActivate", "ChallengeCompleted",
-    "ChallengeFailGeneric", "PublicEventObjectiveUpdate", "PublicEventUnitUpdate",
-    "PlayerPathMissionUpdate", "FriendshipAdd", "FriendshipPostRemove", "FriendshipUpdate"
-  }
-
-  for i, str in pairs(tRewardUpdateEvents) do
-    Apollo.RegisterEventHandler(str, "UpdateAllNameplateRewards", self)
-  end
-
-  self.wndMain = Apollo.LoadForm(self.xmlDoc, "VikingNameplatesForm", nil, self)
-
-  Apollo.RegisterTimerHandler("VisibilityTimer", "OnVisibilityTimer", self)
-  Apollo.CreateTimer("VisibilityTimer", 0.5, true)
-
-  self.wndOptionsMain = Apollo.LoadForm(self.xmlDoc, "StandardModule", self.wndMain:FindChild("ContentMain"), self)
-  self.wndOptionsTargeted = Apollo.LoadForm(self.xmlDoc, "TargetedModule", self.wndMain:FindChild("ContentTarget"), self)
-  self.wndMain:Show(false)
-  self.wndMain:FindChild("ContentMain"):Show(true)
-  self.wndMain:FindChild("ContentTarget"):Show(false)
-  self.wndMain:FindChild("ContentToggleContainer:NormalViewCheck"):SetCheck(true)
-
-  self.arUnit2Nameplate = {}
-  self.arWnd2Nameplate = {}
-
-  for property,tData in pairs(karSavedProperties) do
-    if self[property] == nil then
-      self[property] = tData.default
-    end
-    if tData.nControlType == 1 then
-      local wndControl = self.wndMain:FindChild(tData.strControlName)
-      if wndControl ~= nil then
-        wndControl:SetData(property)
-      end
-    end
-  end
-
-  for key, guildCurr in pairs(GuildLib.GetGuilds()) do
-    local eGuildType = guildCurr:GetType()
-    if eGuildType == GuildLib.GuildType_Guild then
-      self.guildDisplayed = guildCurr
-    end
-    if eGuildType == GuildLib.GuildType_WarParty then
-      self.guildWarParty = guildCurr
-    end
-  end
-
-  -- Cache defaults
-  local wndTemp = Apollo.LoadForm(self.xmlDoc, "NameplateNew", nil, self)
-  self.nFrameLeft, self.nFrameTop, self.nFrameRight, self.nFrameBottom = wndTemp:FindChild("Container:Health:HealthBars:MaxHealth"):GetAnchorOffsets()
-  self.nHealthWidth = self.nFrameRight - self.nFrameLeft
-  wndTemp:Destroy()
-
-  self:CreateUnitsFromPreload()
+  self.bDocLoaded = true
+  self:OnRequiredFlagsChanged()
 
 end
 
-function VikingNameplates:OnSave(eType)
-  if eType ~= GameLib.CodeEnumAddonSaveLevel.Character then
-    return
-  end
+function VikingNameplates:OnUnitCreated(unit)
+  -- Print("Created: " .. uni t:GetName())
 
-  local tSave = {}
-  for property,tData in pairs(karSavedProperties) do
-    tSave[property] = self[property]
-  end
+  -- local tFrame = self:CreateUnitFrame("Player")
+  -- table.insert(tNameplates, tFrame)
+  -- self:SetUnit(tFrame, unit)
+  -- tFrame.wndUnitFrame:SetUnit(unit)
+  -- tFrame.wndUnitFrame:Show(true, false)
+  -- self:SetClass(self.tPlayerFrame)
 
-  return tSave
 end
 
-function VikingNameplates:OnRestore(eType, tSavedData)
-  if eType ~= GameLib.CodeEnumAddonSaveLevel.Character then
-    return
-  end
+function VikingNameplates:OnUnitDestroyed(unit)
+  -- Print("Destroyed: " .. unit:GetName())
+  -- local nameplate = self:GetNameplate(id)
+  -- nameplate = nil
 
-  for property,tData in pairs(karSavedProperties) do
-    if tSavedData[property] ~= nil then
-      self[property] = tSavedData[property]
-    end
-  end
+end
 
-  self:CreateUnitsFromPreload()
+function VikingNameplates:GetNameplate(id)
+  for i,v in ipairs(tNameplates) do
+    if v.id == id then return v end
+  end
 end
 
 function VikingNameplates:OnWindowManagementReady()
-  Event_FireGenericEvent("WindowManagementAdd", {wnd = self.wndMain, strName = "Viking Nameplates"})
+  -- Event_FireGenericEvent("WindowManagementAdd", { wnd = self.tPlayerFrame.wndUnitFrame, strName = "Viking Player Frame" })
+  -- Event_FireGenericEvent("WindowManagementAdd", { wnd = self.tTargetFrame.wndUnitFrame, strName = "Viking Target Frame" })
+  -- Event_FireGenericEvent("WindowManagementAdd", { wnd = self.tFocusFrame.wndUnitFrame,  strName = "Viking Focus Target" })
 end
 
-function VikingNameplates:CreateUnitsFromPreload()
-  if self.bAddonRestoredOrLoaded then
-    self.unitPlayer = GameLib.GetPlayerUnit()
 
-    -- Process units created while form was loading
-    for idUnit, unitNew in pairs(self.arPreloadUnits) do
-      self:OnUnitCreated(unitNew)
-    end
-    self.arPreloadUnits = nil
-  end
-  self.bAddonRestoredOrLoaded = true
-end
-
-function VikingNameplates:OnVisibilityTimer()
-  self:UpdateAllNameplateVisibility()
-end
-
-function VikingNameplates:UpdateAllNameplateRewards()
-  for idx, tNameplate in pairs(self.arUnit2Nameplate) do
-    self:UpdateNameplateRewardInfo(tNameplate)
-  end
-end
-
-function VikingNameplates:UpdateNameplateRewardInfo(tNameplate)
-  local tFlags =
-  {
-    bVert = false,
-    bHideQuests = not self.bShowRewardTypeQuest,
-    bHideChallenges = not self.bShowRewardTypeChallenge,
-    bHideMissions = not self.bShowRewardTypeMission,
-    bHidePublicEvents = not self.bShowRewardTypePublicEvent,
-    bHideRivals = not self.bShowRivals,
-    bHideFriends = not self.bShowFriends
-  }
-
-  if RewardIcons ~= nil and RewardIcons.GetUnitRewardIconsForm ~= nil then
-    RewardIcons.GetUnitRewardIconsForm(tNameplate.wnd.questRewards, tNameplate.unitOwner, tFlags)
-  end
-end
-
-function VikingNameplates:UpdateAllNameplateVisibility()
-  for idx, tNameplate in pairs(self.arUnit2Nameplate) do
-    self:UpdateNameplateVisibility(tNameplate)
-  end
-end
-
-function VikingNameplates:UpdateNameplateVisibility(tNameplate)
-
-  tNameplate.bOnScreen = tNameplate.wndNameplate:IsOnScreen()
-  tNameplate.bOccluded = tNameplate.wndNameplate:IsOccluded()
-  tNameplate.eDisposition = tNameplate.unitOwner:GetDispositionTo(self.unitPlayer)
-
-  local bNewShow = self:HelperVerifyVisibilityOptions(tNameplate) and self:CheckDrawDistance(tNameplate)
-
-  if bNewShow ~= tNameplate.bShow then
-    tNameplate.wndNameplate:Show(bNewShow)
-    tNameplate.bShow = bNewShow
-  end
-end
-
-function VikingNameplates:OnUnitCreated(unitNew) -- build main options here
-  if not unitNew:ShouldShowNamePlate()
-    or unitNew:GetType() == "Collectible"
-    or unitNew:GetType() == "PinataLoot" then
-    -- Never have nameplates
-    return
-  end
-
-  local idUnit = unitNew:GetId()
-  if self.arUnit2Nameplate[idUnit] ~= nil and self.arUnit2Nameplate[idUnit].wndNameplate:IsValid() then
-    return
-  end
-
-  local wnd = nil
-  local wndReferences = nil
-  if next(self.arWindowPool) ~= nil then
-    local poolEntry = table.remove(self.arWindowPool)
-    wnd = poolEntry[1]
-    wndReferences = poolEntry[2]
-  end
-
-  if wnd == nil or not wnd:IsValid() then
-    wnd = Apollo.LoadForm(self.xmlDoc, "NameplateNew", "InWorldHudStratum", self)
-    wndReferences = nil
-  end
-
-  wnd:Show(false, true)
-  wnd:SetUnit(unitNew, 1)
-
-  local tNameplate =
-  {
-    unitOwner     = unitNew,
-    idUnit      = unitNew:GetId(),
-    wndNameplate  = wnd,
-    bOnScreen     = wnd:IsOnScreen(),
-    bOccluded     = wnd:IsOccluded(),
-    bSpeechBubble   = false,
-    bHasThreat    = false,
-    bIsTarget     = false,
-    bIsCluster    = false,
-    bIsCasting    = false,
-    bGibbed     = false,
-    bIsGuildMember  = self.guildDisplayed and self.guildDisplayed:IsUnitMember(unitNew) or false,
-    bIsWarPartyMember = self.guildWarParty and self.guildWarParty:IsUnitMember(unitNew) or false,
-    nVulnerableTime = 0,
-    eDisposition  = unitNew:GetDispositionTo(self.unitPlayer),
-    bShow     = false,
-    wnd       = wndReferences,
-  }
-
-  if wndReferences == nil then
-    tNameplate.wnd =
-    {
-      health = wnd:FindChild("Container:Health"),
-      background = wnd:FindChild("Container:BackgroundContainer"),
-      castBar = wnd:FindChild("Container:CastBar"),
-      vulnerable = wnd:FindChild("Container:Vulnerable"),
-      level = wnd:FindChild("Container:Health:Level"),
-      guild = wnd:FindChild("Guild"),
-      name = wnd:FindChild("NameRewardContainer:Name"),
-      certainDeath = wnd:FindChild("TargetAndDeathContainer:CertainDeath"),
-      targetScalingMark = wnd:FindChild("TargetScalingMark"),
-      nameRewardContainer = wnd:FindChild("NameRewardContainer:RewardContainer"),
-      healthMaxShield = wnd:FindChild("Container:Health:HealthBars:MaxShield"),
-      healthHealthFill = wnd:FindChild("Container:Health:HealthBars:MaxHealth:HealthFill"),
-      healthShieldFill = wnd:FindChild("Container:Health:HealthBars:MaxShield:ShieldFill"),
-      healthMaxAbsorb = wnd:FindChild("Container:Health:HealthBars:MaxAbsorb"),
-      healthAbsorbFill = wnd:FindChild("Container:Health:HealthBars:MaxAbsorb:AbsorbFill"),
-      healthMaxHealth = wnd:FindChild("Container:Health:HealthBars:MaxHealth"),
-      --healthHealthLabel = wnd:FindChild("Container:Health:HealthLabel"),
-      --castBarLabel = wnd:FindChild("Container:CastBar:Label"),
-      castBarCastFill = wnd:FindChild("Container:CastBar:CastFill"),
-      vulnerableVulnFill = wnd:FindChild("Container:Vulnerable:VulnFill"),
-      questRewards = wnd:FindChild("NameRewardContainer:RewardContainer:QuestRewards"),
-      targetMarkerArrow = wnd:FindChild("TargetAndDeathContainer:TargetMarkerArrow"),
-      threatIndicator = wnd:FindChild("Container:ThreatIndicatorContainer:ThreatIndicatorMarker"),
-      interrupt = wnd:FindChild("Container:InterruptContainer:InterruptMarker")
-    }
-  end
-
-  self.arUnit2Nameplate[idUnit] = tNameplate
-  self.arWnd2Nameplate[wnd:GetId()] = tNameplate
-
-  self:DrawName(tNameplate)
-  self:DrawGuild(tNameplate)
-  self:DrawLevel(tNameplate)
-  self:UpdateNameplateRewardInfo(tNameplate)
-  self:DrawRewards(tNameplate)
-  self:DrawThreatIndicator(tNameplate)
-  self:DrawInterrupt(tNameplate)
-end
-
-function VikingNameplates:OnUnitDestroyed(unitOwner)
-  local idUnit = unitOwner:GetId()
-  if self.arUnit2Nameplate[idUnit] == nil then
-    return
-  end
-
-  local tNameplate = self.arUnit2Nameplate[idUnit]
-  local wndNameplate = tNameplate.wndNameplate
-
-  self.arWnd2Nameplate[wndNameplate:GetId()] = nil
-  if #self.arWindowPool < knNameplatePoolLimit then
-    wndNameplate:Show(false, true)
-    wndNameplate:SetUnit(nil)
-    table.insert(self.arWindowPool, {wndNameplate, tNameplate.wnd})
+function VikingNameplates:OnRequiredFlagsChanged()
+  if GameLib.GetPlayerUnit() then
+    self:OnCharacterLoaded()
   else
-    wndNameplate:Destroy()
+    Apollo.RegisterEventHandler("CharacterCreated", "OnCharacterLoaded", self)
   end
-  self.arUnit2Nameplate[idUnit] = nil
 end
+
+
+function VikingNameplates:OnWindowManagementUpdate(tWindow)
+  if tWindow and tWindow.wnd and (tWindow.wnd == self.tPlayerFrame.wndUnitFrame or tWindow.wnd == self.tTargetFrame.wndUnitFrame or tWindow.wnd == self.tFocusFrame.wndUnitFrame) then
+    local bMoveable = tWindow.wnd:IsStyleOn("Moveable")
+
+    tWindow.wnd:SetStyle("Sizable", bMoveable)
+    tWindow.wnd:SetStyle("RequireMetaKeyToMove", bMoveable)
+    tWindow.wnd:SetStyle("IgnoreMouse", not bMoveable)
+  end
+end
+
+
+function VikingNameplates:OnUnitLevelChange()
+  self:SetUnitLevel(self.tPlayerFrame)
+  self:SetUnitLevel(self.tTargetFrame)
+end
+
+
+--
+-- CreateUnitFrame
+--
+--   Builds a UnitFrame instance
+
+function VikingNameplates:CreateUnitFrame(name)
+
+  local sFrame = "t" .. name .. "Frame"
+
+  local wndUnitFrame = Apollo.LoadForm(self.xmlDoc, "UnitFrame", "InWorldHudStratum" , self)
+
+  local tFrame = {
+    name          = name,
+    wndUnitFrame  = wndUnitFrame,
+    wndHealthBar  = wndUnitFrame:FindChild("Bars:Health"),
+    wndShieldBar  = wndUnitFrame:FindChild("Bars:Shield"),
+    wndAbsorbBar  = wndUnitFrame:FindChild("Bars:Absorb"),
+    wndCastBar    = wndUnitFrame:FindChild("Bars:Cast"),
+    wndTargetMark = wndUnitFrame:FindChild("TargetExtra:Mark"),
+    bCasting      = false
+  }
+
+  -- tFrame.wndUnitFrame:SetSizingMinimum(140, 60)
+
+  -- tFrame.locDefaultPosition = WindowLocation.new(self.db.position[name:lower() .. "Frame"])
+  -- tFrame.wndUnitFrame:MoveToLocation(tFrame.locDefaultPosition)
+  self:InitColors(tFrame)
+
+  return tFrame
+
+end
+
+
+--
+-- OnCharacterLoaded
+--
+--
+function VikingNameplates:OnCharacterLoaded()
+  local playerUnit = GameLib.GetPlayerUnit()
+  if not playerUnit then
+    return
+  end
+
+  if VikingLib == nil then
+    VikingLib = Apollo.GetAddon("VikingLibrary")
+  end
+
+  if VikingLib ~= nil then
+    tDefaultSettings = {
+      style = 0,
+      position = {
+        playerFrame = {
+          fPoints  = {0.5, 1, 0.5, 1},
+          nOffsets = {-350, -200, -100, -120}
+        },
+        targetFrame = {
+          fPoints  = {0.5, 1, 0.5, 1},
+          nOffsets = {100, -200, 350, -120}
+        },
+        focusFrame = {
+          fPoints  = {0, 1, 0, 1},
+          nOffsets = {40, -500, 250, -440}
+        }
+      },
+      textStyle = {
+        Value = false,
+        Percent = true,
+      },
+      colors = {
+        Health = { high = "ff" .. tColors.green,  average = "ff" .. tColors.yellow, low = "ff" .. tColors.red },
+        Shield = { high = "ff" .. tColors.blue,   average = "ff" .. tColors.blue, low = "ff" ..   tColors.blue },
+        Absorb = { high = "ff" .. tColors.yellow, average = "ff" .. tColors.yellow, low = "ff" .. tColors.yellow },
+      }
+    }
+
+    VikingLib.Settings.RegisterSettings(self, "VikingNameplates", "Nameplates", tDefaultSettings)
+    self.db = VikingLib.Settings.GetDatabase("VikingNameplates")
+    self.generalDb = VikingLib.Settings.GetDatabase("General")
+  end
+
+  -- PlayerFrame
+  self.tPlayerFrame = self:CreateUnitFrame("Player")
+
+  self:SetUnit(self.tPlayerFrame, playerUnit)
+  -- self:SetUnitName(self.tPlayerFrame, playerUnit:GetName())
+  -- self:SetUnitLevel(self.tPlayerFrame)
+  self.tPlayerFrame.wndUnitFrame:Show(true, false)
+  -- self:SetClass(self.tPlayerFrame)
+  self.tPlayerFrame.wndUnitFrame:SetUnit(playerUnit)
+
+  -- Target Frame
+  self.tTargetFrame = self:CreateUnitFrame("Target")
+  self:UpdateUnitFrame(self.tTargetFrame, GameLib.GetTargetUnit())
+  self.tTargetFrame.wndUnitFrame:SetUnit(unit)
+
+  -- -- Focus Frame
+  -- self.tFocusFrame = self:CreateUnitFrame("Focus")
+
+
+  -- self.eClassID =  playerUnit:GetClassId()
+
+end
+
+
+local LoadingTimer
+function VikingNameplates:OnWorldChanged()
+  self:OnRequiredFlagsChanged()
+
+  LoadingTimer = ApolloTimer.Create(0.01, true, "OnLoading", self)
+end
+
+
+function VikingNameplates:OnLoading()
+  local playerUnit = GameLib.GetPlayerUnit()
+  if not playerUnit then return end
+  self:SetUnit(self.tPlayerFrame, playerUnit)
+  self:SetUnitLevel(self.tPlayerFrame)
+  self.tPlayerFrame.unit = playerUnit
+  LoadingTimer:Stop()
+end
+
+
+--
+-- OnTargetUnitChanged
+--
+
+function VikingNameplates:OnTargetUnitChanged(unit)
+  self:UpdateUnitFrame(self.tTargetFrame, unit)
+end
+
+
+--
+-- OnFocusUnitChanged
+--
+
+function VikingNameplates:OnFocusUnitChanged(unit)
+  self:UpdateUnitFrame(self.tFocusFrame, unit)
+end
+
+function VikingNameplates:UpdateUnitFrame(tFrame, unit)
+  Print("hello")
+
+  tFrame.wndUnitFrame:Show(unit ~= nil)
+
+  if unit ~= nil then
+    self:SetUnit(tFrame, unit)
+    self:SetUnitName(tFrame, unit:GetName())
+    self:SetClass(tFrame)
+
+    tFrame.id = unit:GetId()
+  end
+
+end
+
+--
+-- OnFrame
+--
+-- Render loop
 
 function VikingNameplates:OnFrame()
-  self.unitPlayer = GameLib.GetPlayerUnit()
+  if not self.tPlayerFrame.unit then return end
 
-  for idx, tNameplate in pairs(self.arUnit2Nameplate) do
-    self:DrawNameplate(tNameplate)
+  if self.tPlayerFrame ~= nil then
+
+    -- UnitFrame
+    self:UpdateBars(self.tPlayerFrame)
+
+    -- TargetFrame
+    self:UpdateBars(self.tTargetFrame)
+    self:SetUnitLevel(self.tTargetFrame)
+
+    -- -- FocusFrame
+    -- self:UpdateBars(self.tFocusFrame)
+    -- self:SetUnitLevel(self.tFocusFrame)
+
+
   end
 
 end
 
-function VikingNameplates:DrawNameplate(tNameplate)
-  if not tNameplate.bShow then
-    return
-  end
 
-  local unitPlayer = self.unitPlayer
-  local unitOwner = tNameplate.unitOwner
-  local wndNameplate = tNameplate.wndNameplate
+--
+-- UpdateBars
+--
+-- Update the bars for a unit on UnitFrame
 
-  if unitOwner:IsMounted() and wndNameplate:GetUnit() == unitOwner then
-    wndNameplate:SetUnit(unitOwner:GetUnitMount(), 1)
-  elseif not unitOwner:IsMounted() and wndNameplate:GetUnit() ~= unitOwner then
-    wndNameplate:SetUnit(unitOwner, 1)
-  end
+function VikingNameplates:UpdateBars(tFrame)
 
-  self:DrawHealth(tNameplate)
+  local tHealthMap = {
+    bar     = "Health",
+    current = "GetHealth",
+    max     = "GetMaxHealth"
+  }
 
-  local nCon = self:HelperCalculateConValue(unitOwner)
-  tNameplate.wnd.certainDeath:Show(self.bShowCertainDeathMain and nCon == #karConColors and tNameplate.eDisposition ~= Unit.CodeEnumDisposition.Friendly and unitOwner:GetHealth() and unitOwner:ShouldShowNamePlate() and not unitOwner:IsDead())
-  tNameplate.wnd.targetScalingMark:Show(unitOwner:IsScaled())
+  local tShieldMap = {
+    bar     = "Shield",
+    current = "GetShieldCapacity",
+    max     = "GetShieldCapacityMax"
+  }
 
-  self:DrawRewards(tNameplate)
-  self:DrawCastBar(tNameplate)
-  self:DrawVulnerable(tNameplate)
-  self:ColorNameplate(tNameplate)
-  self:DrawThreatIndicator(tNameplate)
-  self:DrawInterrupt(tNameplate)
+  local tAbsorbMap = {
+    bar     = "Absorb",
+    current = "GetAbsorptionValue",
+    max     = "GetAbsorptionMax"
+  }
+
+  self:ShowCastBar(tFrame)
+  self:SetBar(tFrame, tHealthMap)
+  self:SetBar(tFrame, tShieldMap)
+  self:SetBar(tFrame, tAbsorbMap)
+  self:SetTargetMark(tFrame)
 end
 
-function VikingNameplates:ColorNameplate(tNameplate)
-  local unitPlayer = self.unitPlayer
-  local unitOwner = tNameplate.unitOwner
-  local wndNameplate = tNameplate.wndNameplate
 
-  local eDisposition = tNameplate.eDisposition
-  local nCon = self:HelperCalculateConValue(unitOwner)
+-- SetBar
+--
+-- Set Bar Value on UnitFrame
 
-  local crLevelColorToUse = karConColors[nCon][2]
-  if tNameplate.wnd.targetScalingMark:IsShown() then
-    crLevelColorToUse = kcrScalingCColor
-  elseif unitOwner:GetLevel() == nil then
-    crLevelColorToUse = karConColors[1][2]
-  end
+function VikingNameplates:SetBar(tFrame, tMap)
+  if tFrame.unit ~= nil and tMap ~= nil then
+    local unit          = tFrame.unit
+    local nCurrent      = unit[tMap.current](unit)
+    local nMax          = unit[tMap.max](unit)
+    local wndBar        = tFrame["wnd" .. tMap.bar .. "Bar"]
+    local wndProgress   = wndBar:FindChild("ProgressBar")
 
-  local crColorToUse = karDisposition.tTextColors[eDisposition]
-  local unitController = unitOwner:GetUnitOwner() or unitOwner
-  local strUnitType = unitOwner:GetType()
 
-  if strUnitType == "Player" or strUnitType == "Pet" or strUnitType == "Esper Pet" then
-    if eDisposition == Unit.CodeEnumDisposition.Friendly or unitOwner:IsThePlayer() then
-      crColorToUse = kcrUnflaggedAlly
-      if unitController:IsPvpFlagged() then
-        crColorToUse = kcrFlaggedAlly
-      elseif unitController:IsInYourGroup() then
-        crColorToUse = kcrUnflaggedGroupmate
-      elseif tNameplate.bIsGuildMember then
-        crColorToUse = kcrUnflaggedGuildmate
+    local isValidBar = (nMax ~= nil and nMax ~= 0) and true or false
+    wndBar:Show(isValidBar, false)
+
+    if isValidBar then
+
+      wndProgress:SetMax(nMax)
+      wndProgress:SetProgress(nCurrent)
+
+      local nLowBar     = 0.3
+      local nAverageBar = 0.5
+
+      -- Set our bar color based on the percent full
+      local tColors = self.db.colors[tMap.bar]
+      local color   = tColors.high
+
+      if nCurrent / nMax <= nLowBar then
+        color = tColors.low
+      elseif nCurrent / nMax <= nAverageBar then
+        color = tColors.average
       end
+
+      wndProgress:SetBarColor(ApolloColor.new(color))
+    end
+  end
+end
+
+
+
+--
+-- SetClass
+--
+-- Set Class on UnitFrame
+
+function VikingNameplates:SetClass(tFrame)
+
+    local strPlayerIconSprite, strRankIconSprite, locNameText
+    local sUnitType = tFrame.unit:GetType()
+
+    if sUnitType == "Player" then
+      locNameText         = { 24, 0, -30, 26 }
+      strRankIconSprite   = ""
+      strPlayerIconSprite = tClassToSpriteMap[tFrame.unit:GetClassId()]
     else
-      local bIsUnitFlagged = unitController:IsPvpFlagged()
-      local bAmIFlagged = GameLib.IsPvpFlagged()
-
-      if not bAmIFlagged and not bIsUnitFlagged then
-        crColorToUse = kcrUnflaggedEnemyWhenUnflagged
-      elseif bAmIFlagged and not bIsUnitFlagged then
-        crColorToUse = kcrUnflaggedEnemyWhenFlagged
-      elseif not bAmIFlagged and bIsUnitFlagged then
-        crColorToUse = kcrFlaggedEnemyWhenUnflagged
-      elseif bAmIFlagged and bIsUnitFlagged then
-        crColorToUse = kcrFlaggedEnemyWhenFlagged
-      end
-    end
-  end
-
-  if unitOwner:GetType() ~= "Player" and unitOwner:IsTagged() and not unitOwner:IsTaggedByMe() and not unitOwner:IsSoftKill() then
-    crColorToUse = kcrDefaultTaggedColor
-  end
-
-  if unitOwner:IsDead() then
-    crColorToUse = kcrDeadColor
-    crLevelColorToUse = kcrDeadColor
-  end
-
-  --tNameplate.wnd.level:SetTextColor(crLevelColorToUse)
-  tNameplate.wnd.name:SetTextColor(crColorToUse)
-  tNameplate.wnd.guild:SetTextColor(crColorToUse)
-end
-
-function VikingNameplates:DrawName(tNameplate)
-  local wndNameplate = tNameplate.wndNameplate
-  local unitOwner = tNameplate.unitOwner
-
-  local wndName = tNameplate.wnd.name
-  local bUseTarget = tNameplate.bIsTarget
-  local bShow = self.bShowNameMain
-  if bUseTarget then
-    bShow = self.bShowNameTarget
-  end
-
-  if wndName:IsShown() ~= bShow then
-    wndName:Show(bShow)
-  end
-  if bShow then
-    local strNewName
-    if self.bShowTitle then
-      strNewName = unitOwner:GetTitleOrName()
-    else
-      strNewName = unitOwner:GetName()
+      locNameText         = { 34, 0, -30, 26 }
+      strPlayerIconSprite = ""
+      strRankIconSprite   = tRankToSpriteMap[tFrame.unit:GetRank()]
     end
 
-    if wndName:GetText() ~= strNewName then
-      local wndNameRewardContainer = tNameplate.wnd.nameRewardContainer
-      local nNameWidth = Apollo.GetTextWidth("VikingNameplates", strNewName)
-      local nHalfNameWidth = math.ceil(nNameWidth / 2)
+    tFrame.wndUnitFrame:FindChild("TargetInfo:UnitName"):SetAnchorOffsets(locNameText[1], locNameText[2], locNameText[3], locNameText[4])
+    tFrame.wndUnitFrame:FindChild("TargetInfo:ClassIcon"):SetSprite(strPlayerIconSprite)
+    tFrame.wndUnitFrame:FindChild("TargetInfo:RankIcon"):SetSprite(strRankIconSprite)
 
-      -- Rewards also depend on name
-      local nLeft, nTop, nRight, nBottom = wndNameRewardContainer:GetAnchorOffsets()
-      wndNameRewardContainer:SetAnchorOffsets(nHalfNameWidth, nTop, nHalfNameWidth + wndNameRewardContainer:ArrangeChildrenHorz(0), nBottom)
-
-      wndName:SetText(strNewName)
-    end
-
-
-  end
 end
 
-function VikingNameplates:DrawGuild(tNameplate)
-  local wndNameplate = tNameplate.wndNameplate
-  local unitOwner = tNameplate.unitOwner
 
-  local wndGuild = tNameplate.wnd.guild
-  local bUseTarget = tNameplate.bIsTarget
-  local bShow = self.bShowTitle
-  if bUseTarget then
-    bShow = self.bShowGuildNameTarget
-  end
+--
+-- SetDisposition
+--
+-- Set Disposition on UnitFrame
 
-  local strNewGuild = unitOwner:GetAffiliationName()
-  if unitOwner:GetType() == "Player" and strNewGuild ~= nil and strNewGuild ~= "" then
-    strNewGuild = String_GetWeaselString(Apollo.GetString("Nameplates_GuildDisplay"), strNewGuild)
-  end
+function VikingNameplates:SetTargetMark(tFrame)
+  if not tFrame.unit then return else end
 
-  if strNewGuild ~= wndGuild:GetText() then
-    wndGuild:SetTextRaw(strNewGuild)
-  end
+  local nMarkerID = tFrame.unit:GetTargetMarker() or 0
 
-  local bShow = bShow and strNewGuild ~= nil and strNewGuild ~= ""
-
-  if wndGuild:IsShown() ~= bShow then
-    wndGuild:Show(bShow)
-    wndNameplate:ArrangeChildrenVert(2)
-  end
-end
-
-function VikingNameplates:DrawLevel(tNameplate)
-  local unitOwner = tNameplate.unitOwner
-
-  tNameplate.wnd.level:SetText(unitOwner:GetLevel() or "-")
-end
-
-function VikingNameplates:DrawHealth(tNameplate)
-  local wndNameplate = tNameplate.wndNameplate
-  local unitOwner = tNameplate.unitOwner
-
-  local wndHealth = tNameplate.wnd.health
-
-  if unitOwner:GetHealth() == nil then
-    self:ToggleNamePlatesVisiblity(tNameplate, false)
-    return
-  end
-
-  local bUseTarget = tNameplate.bIsTarget
-  if bUseTarget then
-    self:ToggleNamePlatesVisiblity(tNameplate, self.bShowHealthTarget)
+  if nMarkerID ~= 0 then
+    local sprite = tTargetMarkSpriteMap[nMarkerID]
+    tFrame.wndTargetMark:Show(true, false)
+    tFrame.wndTargetMark:SetSprite(sprite)
   else
-    if self.bShowHealthMain then
-      self:ToggleNamePlatesVisiblity(tNameplate, true)
-    elseif self.bShowHealthMainDamaged then
-      self:ToggleNamePlatesVisiblity(tNameplate, unitOwner:GetHealth() ~= unitOwner:GetMaxHealth())
-    else
-      self:ToggleNamePlatesVisiblity(tNameplate, false)
-    end
-  end
-  if wndHealth:IsShown() then
-    self:HelperDoHealthShieldBar(wndHealth, unitOwner, tNameplate.eDisposition, tNameplate)
+    tFrame.wndTargetMark:Show(false, true)
   end
 end
 
-function VikingNameplates:ToggleNamePlatesVisiblity(tNameplate, bShow)
-  tNameplate.wnd.background:Show(bShow)
-  tNameplate.wnd.health:Show(bShow)
+
+--
+-- SetDisposition
+--
+-- Set Disposition on UnitFrame
+
+function VikingNameplates:SetDisposition(tFrame, targetUnit)
+  tFrame.disposition = targetUnit:GetDispositionTo(self.tPlayerFrame.unit)
+  local dispositionColor = ApolloColor.new(self.generalDb.dispositionColors[tFrame.disposition])
 end
 
-function VikingNameplates:DrawCastBar(tNameplate)
-  local wndNameplate = tNameplate.wndNameplate
-  local unitOwner = tNameplate.unitOwner
 
-  -- Casting; has some onDraw parameters we need to check
-  tNameplate.bIsCasting = unitOwner:ShouldShowCastBar()
+--
+-- SetUnit
+--
+-- Set Unit on UnitFrame
 
-  local bShowTarget = tNameplate.bIsTarget
-  local wndCastBar = tNameplate.wnd.castBar
-  local bShow = tNameplate.bIsCasting and self.bShowCastBarMain
-  if tNameplate.bIsCasting and bShowTarget then
-    bShow = self.bShowCastBarTarget
-  end
+function VikingNameplates:SetUnit(tFrame, unit)
+  tFrame.unit = unit
+  self:SetDisposition(tFrame, unit)
 
-  wndCastBar:Show(bShow)
-  if bShow then
-    --tNameplate.wnd.castBarLabel:SetText(unitOwner:GetCastName())
-    tNameplate.wnd.castBarCastFill:SetMax(unitOwner:GetCastDuration())
-    tNameplate.wnd.castBarCastFill:SetProgress(unitOwner:GetCastElapsed())
-  end
+  -- Set the Data to the unit, for mouse events
+  tFrame.wndUnitFrame:SetData(tFrame.unit)
+
 end
 
-function VikingNameplates:DrawVulnerable(tNameplate)
-  local wndNameplate = tNameplate.wndNameplate
-  local unitOwner = tNameplate.unitOwner
 
-  local bUseTarget = tNameplate.bIsTarget
-  local wndVulnerable = tNameplate.wnd.vulnerable
+--
+-- SetUnitName
+--
+-- Set Name on UnitFrame
 
-  local bIsVulnerable = false
-  if (not bUseTarget and (self.bShowHealthMain or self.bShowHealthMainDamaged)) or (bUseTarget and self.bShowHealthTarget) then
-    local nVulnerable = unitOwner:GetCCStateTimeRemaining(Unit.CodeEnumCCState.Vulnerability)
-    if nVulnerable == nil then
-      wndVulnerable:Show(false)
-    elseif nVulnerable == 0 and nVulnerable ~= tNameplate.nVulnerableTime then
-      tNameplate.nVulnerableTime = 0 -- casting done, set back to 0
-      wndVulnerable:Show(false)
-    elseif nVulnerable ~= 0 and nVulnerable > tNameplate.nVulnerableTime then
-      tNameplate.nVulnerableTime = nVulnerable
-      wndVulnerable:Show(true)
-      bIsVulnerable = true
-    elseif nVulnerable ~= 0 and nVulnerable < tNameplate.nVulnerableTime then
-      tNameplate.wnd.vulnerableVulnFill:SetMax(tNameplate.nVulnerableTime)
-      tNameplate.wnd.vulnerableVulnFill:SetProgress(nVulnerable)
-      bIsVulnerable = true
-    end
-  end
+function VikingNameplates:SetUnitName(tFrame, sName)
+  tFrame.wndUnitFrame:FindChild("UnitName"):SetText(sName)
 end
 
-function VikingNameplates:DrawRewards(tNameplate)
-  local wndNameplate = tNameplate.wndNameplate
-  local unitOwner = tNameplate.unitOwner
 
-  local bUseTarget = tNameplate.bIsTarget
-  local bShow = self.bShowRewardsMain
-  if bUseTarget then
-    bShow = self.bShowRewardsTarget
-  end
+--
+-- SetUnitLevel
+--
+-- Set Level on UnitFrame
 
-  tNameplate.wnd.questRewards:Show(bShow)
-  local tRewardsData = tNameplate.wnd.questRewards:GetData()
-  if bShow and tRewardsData ~= nil and tRewardsData.nIcons ~= nil and tRewardsData.nIcons > 0 then
-    local strName = tNameplate.wnd.name:GetText()
-    local nNameWidth = Apollo.GetTextWidth("CRB_Interface9_BBO", strName)
-    local nHalfNameWidth = nNameWidth / 2
+function VikingNameplates:SetUnitLevel(tFrame)
+  if tFrame.unit == nil then return end
+  local sLevel = tFrame.unit:GetLevel()
+  tFrame.wndUnitFrame:FindChild("UnitLevel"):SetText(sLevel)
+end
 
-    local wndnameRewardContainer = tNameplate.wnd.nameRewardContainer
-    local nLeft, nTop, nRight, nBottom = wndnameRewardContainer:GetAnchorOffsets()
-    wndnameRewardContainer:SetAnchorOffsets(nHalfNameWidth, nTop, nHalfNameWidth + wndnameRewardContainer:ArrangeChildrenHorz(0), nBottom)
+
+
+--
+-- InitColor
+--
+-- Let's initialize some colors from settings
+
+function VikingNameplates:InitColors(tFrame)
+
+  local colors = {
+    background = {
+      wnd   = tFrame.wndUnitFrame:FindChild("Background"),
+      color = ApolloColor.new(self.generalDb.colors.background)
+    },
+    gradient = {
+      wnd   = tFrame.wndUnitFrame,
+      color = ApolloColor.new(self.generalDb.colors.gradient)
+    }
+  }
+
+  for k,v in pairs(colors) do
+    v.wnd:SetBGColor(v.color)
   end
 end
 
-function VikingNameplates:DrawTargeting(tVikingNameplates)
-  local wndNameplate = tNameplate.wndNameplate
-  local unitOwner = tNameplate.unitOwner
 
-  local bUseTarget = tNameplate.bIsTarget
 
-  local bShowTargetMarkerArrow = bUseTarget and self.bShowMarkerTarget and not tVikingNameplates.wnd.health:IsShown()
-  tNameplate.wnd.targetMarkerArrow:SetSprite(karDisposition.tTargetSecondary[tNameplate.eDisposition])
-  tNameplate.wnd.targetMarkerArrow:Show(bShowTargetMarkerArrow, not bShowTargetMarkerArrow)
+-- ShowCastBar
+--
+-- Check to see if a unit is casting, if so, render the cast bar
+
+function VikingNameplates:ShowCastBar(tFrame)
+
+  -- If no unit then don't do anything
+  if tFrame.unit == nil then return end
+
+  local unit = tFrame.unit
+  local bCasting = unit:ShouldShowCastBar()
+  self:UpdateCastBar(tFrame, bCasting)
 end
 
-function VikingNameplates:DrawThreatIndicator(tNameplate)
-  local unitOwner = tNameplate.unitOwner
-  local bShow = self.bShowThreatIndicator
-  local bHasThreat = unitOwner:GetTarget() == self.unitPlayer
-  local bIsAlive = not unitOwner:IsDead()
-  local bIsPlayer = unitOwner:GetType() == "Player"
-  tNameplate.wnd.threatIndicator:Show(bShow and bHasThreat and bIsAlive and not bIsPlayer)
-end
 
-function VikingNameplates:DrawInterrupt(tNameplate)
-  local unitOwner = tNameplate.unitOwner
-  local nArmorValue = unitOwner:GetInterruptArmorValue()
-  local nMaxArmor = unitOwner:GetInterruptArmorMax()
-  local bShow = self.bShowInterrupt
-  local bInfinite = nMaxArmor == -1
-  local bHasArmor = nArmorValue > 0
-  local bIsDead = unitOwner:IsDead()
-  local bDisplayIfDamage = self.bShowHealthMainDamaged
-  local bPlayerIsDamaged = unitOwner:GetHealth() ~= unitOwner:GetMaxHealth()
+--
+-- UpdateCastBar
+--
+-- Casts that have timers use this method to indicate their progress
 
-  if not bShow or not bDisplayIfDamage then
-    tNameplate.wnd.interrupt:Show(false)
+function VikingNameplates:UpdateCastBar(tFrame, bCasting)
+
+  -- If just started casting
+  if bCasting and tFrame.bCasting == false then
+    tFrame.bCasting = true
+
+    local wndProgressBar = tFrame.wndCastBar:FindChild("ProgressBar")
+    local wndText        = tFrame.wndCastBar:FindChild("Text")
+    local sCastName      = tFrame.unit:GetCastName()
+
+    tFrame.nTimePrevious = 0
+    tFrame.nTimeMax      = tFrame.unit:GetCastDuration()
+    tFrame.wndCastBar:Show(true, false)
+    wndProgressBar:SetProgress(0)
+    wndProgressBar:SetMax(tFrame.nTimeMax)
+    wndText:SetText(sCastName)
+
+    tFrame.CastTimerTick = ApolloTimer.Create(0.01, true, "OnCast" .. tFrame.name .. "FrameTimerTick", self)
+
+  elseif bCasting and tFrame.bCasting == true then
     return
+  elseif not bCasting and tFrame.bCasting == true then
+    VikingNameplates:KillCastTimer(tFrame)
+    tFrame.bCasting = false
   end
 
-  if nMaxArmor == 0 or nArmorValue == nil or bIsDead then
-      tNameplate.wnd.interrupt:Show(false)
-    else
-      tNameplate.wnd.interrupt:Show(true)
-      if nMaxArmor == -1 then
-        tNameplate.wnd.interrupt:SetTextColor("xkcdPastelOrange")
-        tNameplate.wnd.interrupt:SetText("X")
-      elseif nArmorValue == 0 and nMaxArmor > 0 then
-        tNameplate.wnd.interrupt:SetText("0")
-      elseif nMaxArmor > 0 then
-        tNameplate.wnd.interrupt:SetText(nArmorValue)
-      end
-  end
 end
 
-function VikingNameplates:CheckDrawDistance(tNameplate)
-  local unitPlayer = self.unitPlayer
-  local unitOwner = tNameplate.unitOwner
-
-  if not unitOwner or not unitPlayer then
-      return false
-  end
-
-  tPosTarget = unitOwner:GetPosition()
-  tPosPlayer = unitPlayer:GetPosition()
-
-  if tPosTarget == nil then
-    return
-  end
-
-  local nDeltaX = tPosTarget.x - tPosPlayer.x
-  local nDeltaY = tPosTarget.y - tPosPlayer.y
-  local nDeltaZ = tPosTarget.z - tPosPlayer.z
-
-  local nDistance = (nDeltaX * nDeltaX) + (nDeltaY * nDeltaY) + (nDeltaZ * nDeltaZ)
-
-  if tNameplate.bIsTarget or tNameplate.bIsCluster then
-    bInRange = nDistance < knTargetRange
-    return bInRange
-  else
-    bInRange = nDistance < (self.nMaxRange * self.nMaxRange) -- squaring for quick maths
-    return bInRange
-  end
-end
-
-function VikingNameplates:HelperVerifyVisibilityOptions(tNameplate)
-  local unitPlayer = self.unitPlayer
-  local unitOwner = tNameplate.unitOwner
-  local eDisposition = tNameplate.eDisposition
-
-  local bHiddenUnit = not unitOwner:ShouldShowNamePlate()
-  if bHiddenUnit and not tNameplate.bIsTarget then
-    return false
-  end
-
-  if (self.bUseOcclusion and tNameplate.bOccluded) or not tNameplate.bOnScreen then
-    return false
-  end
-
-  if tNameplate.bGibbed or tNameplate.bSpeechBubble then
-    return false
-  end
-
-  local bShowNameplate = false
-
-  if self.bShowMainObjectiveOnly and tNameplate.bIsObjective then
-    bShowNameplate = true
-  end
-
-  if self.bShowMainGroupOnly and unitOwner:IsInYourGroup() then
-    bShowNameplate = true
-  end
-
-  if self.bShowDispositionHostile and eDisposition == Unit.CodeEnumDisposition.Hostile then
-    bShowNameplate = true
-  end
-
-  if self.bShowDispositionNeutral and eDisposition == Unit.CodeEnumDisposition.Neutral then
-    bShowNameplate = true
-  end
-
-  if self.bShowDispositionFriendly and eDisposition == Unit.CodeEnumDisposition.Friendly then
-    bShowNameplate = true
-  end
-
-  if self.bShowDispositionFriendlyPlayer and eDisposition == Unit.CodeEnumDisposition.Friendly and unitOwner:GetType() == "Player" then
-    bShowNameplate = true
-  end
-
-  local tActivation = unitOwner:GetActivationState()
-
-  if self.bShowVendor and tActivation.Vendor ~= nil then
-    bShowNameplate = true
-  end
-
-  if self.bShowTaxi and (tActivation.FlightPathSettler ~= nil or tActivation.FlightPath ~= nil or tActivation.FlightPathNew) then
-    bShowNameplate = true
-  end
-
-  if self.bShowOrganization and tNameplate.bIsGuildMember then
-    bShowNameplate = true
-  end
-
-  if self.bShowMainObjectiveOnly then
-    -- QuestGivers too
-    if tActivation.QuestReward ~= nil then
-      bShowNameplate = true
-    end
-
-    if tActivation.QuestNew ~= nil or tActivation.QuestNewMain ~= nil then
-      bShowNameplate = true
-    end
-
-    if tActivation.QuestReceiving ~= nil then
-      bShowNameplate = true
-    end
-
-    if tActivation.TalkTo ~= nil then
-      bShowNameplate = true
-    end
-  end
-
-  if bShowNameplate then
-    bShowNameplate = not (self.bPlayerInCombat and self.bHideInCombat)
-  end
-
-  if unitOwner:IsThePlayer() then
-    if self.bShowMyNameplate and not unitOwner:IsDead() then
-      bShowNameplate = true
-    else
-      bShowNameplate = false
-    end
-  end
-
-  return bShowNameplate or tNameplate.bIsTarget
-end
-
-function VikingNameplates:HelperDoHealthShieldBar(wndHealth, unitOwner, eDisposition, tNameplate)
-  local nVulnerabilityTime = unitOwner:GetCCStateTimeRemaining(Unit.CodeEnumCCState.Vulnerability)
-
-  if unitOwner:GetType() == "Simple" or unitOwner:GetHealth() == nil then
-    --tNameplate.wnd.healthHealthLabel:SetText("")
-    return
-  end
-
-
-  local wndHealth = tNameplate.wnd.healthHealthFill
-  local wndShield = tNameplate.wnd.healthShieldFill
-  local wndAbsorb = tNameplate.wnd.healthAbsorbFill
-
-  local nHealthCurr   = unitOwner:GetHealth()
-  local nHealthMax  = unitOwner:GetMaxHealth()
-  local nShieldCurr   = unitOwner:GetShieldCapacity()
-  local nShieldMax  = unitOwner:GetShieldCapacityMax()
-  local nAbsorbCurr   = 0
-  local nAbsorbMax  = unitOwner:GetAbsorptionMax()
-  if nAbsorbMax > 0 then
-    nAbsorbCurr = unitOwner:GetAbsorptionValue() -- Since it doesn't clear when the buff drops off
-  end
-  local nTotalMax = nHealthMax + nShieldMax + nAbsorbMax
-
-  if unitOwner:IsDead() then
-    nHealthCurr = 0
-  end
-
-  -- Scaling
-  local nPointHealthRight = self.nFrameLeft + (self.nHealthWidth * (nHealthCurr / nTotalMax)) -- applied to the difference between L and R
-  local nPointShieldRight = self.nFrameLeft + (self.nHealthWidth * ((nHealthCurr + nShieldMax) / nTotalMax))
-  local nPointAbsorbRight = self.nFrameLeft + (self.nHealthWidth * ((nHealthCurr + nShieldMax + nAbsorbMax) / nTotalMax))
-
-
-  if nShieldMax > 0 and nShieldMax / nTotalMax < 0.2 then
-    local nMinShieldSize = 0.2 -- HARDCODE: Minimum shield bar length is 20% of total for formatting
-
-    nPointHealthRight = self.nFrameLeft + (self.nHealthWidth*(math.min(1 - nMinShieldSize, nHealthCurr / nTotalMax)))
-    nPointShieldRight = self.nFrameLeft + (self.nHealthWidth*(math.min(1, (nHealthCurr / nTotalMax) + nMinShieldSize)))
-  end
-
-  -- Resize
-  self:SetBarValue(wndHealth, 0, nHealthCurr, nHealthMax)
-  self:SetBarValue(wndShield, 0, nShieldCurr, nShieldMax)
-  self:SetBarValue(wndAbsorb, 0, nAbsorbCurr, nAbsorbMax)
-
-  local nBackgroundStartY     = -18
-  local nBackgroundMin        = 14
-  local nBackgroundRow        = 10
-  local nBackgroundMultiplier = 0
-  if nShieldCurr > 0 then
-    nBackgroundMultiplier = 1
-  elseif nShieldCurr > 0 and nAbsorbMax > 0 then
-    nBackgroundMultiplier = 2
-  end
-  tNameplate.wnd.background:SetAnchorOffsets(0, nBackgroundStartY, 0, nBackgroundMin + (nBackgroundRow * nBackgroundMultiplier))
-
-  -- Bars
-  tNameplate.wnd.healthMaxHealth:Show(nHealthCurr > 0)
-  tNameplate.wnd.healthMaxShield:Show(nHealthCurr > 0 and nShieldMax > 0)
-  tNameplate.wnd.healthMaxAbsorb:Show(nHealthCurr > 0 and nAbsorbMax > 0)
-
-  local healthColor = tColors.green
-
-  local eDisposition = unitOwner:GetDispositionTo(self.unitPlayer)
-
-  if eDisposition == 0 then -- hostile
-    healthColor = tColors.red
-  elseif eDisposition == 1 then -- neutral
-    healthColor = tColors.yellow
-  elseif eDisposition == 2 then -- friendly
-    healthColor = tColors.green
-  end
-
-  -- if unitOwner:IsInCCState(Unit.CodeEnumCCState.Vulnerability) then
-    -- healthColor = tColors.lightPurple
-
-  -- elseif nHealthCurr / nHealthMax <= knHealthRed then
-  --   healthColor = tColors.red
-  -- elseif nHealthCurr / nHealthMax <= knHealthYellow then
-  --   healthColor = tColors.yellow
-  -- end
-
-
-  wndHealth:SetBarColor(healthColor)
-
-
-  -- Text
-  local strHealthMax = self:HelperFormatBigNumber(nHealthMax)
-  local strHealthCurr = self:HelperFormatBigNumber(nHealthCurr)
-  local strShieldCurr = self:HelperFormatBigNumber(nShieldCurr)
-
-  local strText = nHealthMax == nHealthCurr and strHealthMax or String_GetWeaselString(Apollo.GetString("TargetFrame_HealthText"), strHealthCurr, strHealthMax)
-  if nShieldMax > 0 and nShieldCurr > 0 then
-    strText = String_GetWeaselString(Apollo.GetString("TargetFrame_HealthShieldText"), strText, strShieldCurr)
-  end
-  --tNameplate.wnd.healthHealthLabel:SetText(strText)
-
-  --[[
-  elseif nHealthCurr / nHealthMax < .3 then
-    wndHealth:FindChild("MaxHealth"):SetSprite(ktHealthBarSprites[3])
-  elseif  nHealthCurr / nHealthMax < .5 then
-    wndHealth:FindChild("MaxHealth"):SetSprite(ktHealthBarSprites[2])
-  else
-    wndHealth:FindChild("MaxHealth"):SetSprite(ktHealthBarSprites[1])
-  end]]--
-end
-
-function VikingNameplates:HelperFormatBigNumber(nArg)
-  if nArg < 1000 then
-    strResult = tostring(nArg)
-  elseif nArg < 1000000 then
-    if math.floor(nArg%1000/100) == 0 then
-      strResult = String_GetWeaselString(Apollo.GetString("TargetFrame_ShortNumberWhole"), math.floor(nArg / 1000))
-    else
-      strResult = String_GetWeaselString(Apollo.GetString("TargetFrame_ShortNumberFloat"), nArg / 1000)
-    end
-  elseif nArg < 1000000000 then
-    if math.floor(nArg%1000000/100000) == 0 then
-      strResult = String_GetWeaselString(Apollo.GetString("TargetFrame_MillionsNumberWhole"), math.floor(nArg / 1000000))
-    else
-      strResult = String_GetWeaselString(Apollo.GetString("TargetFrame_MillionsNumberFloat"), nArg / 1000000)
-    end
-  elseif nArg < 1000000000000 then
-    if math.floor(nArg%1000000/100000) == 0 then
-      strResult = String_GetWeaselString(Apollo.GetString("TargetFrame_BillionsNumberWhole"), math.floor(nArg / 1000000))
-    else
-      strResult = String_GetWeaselString(Apollo.GetString("TargetFrame_BillionsNumberFloat"), nArg / 1000000)
-    end
-  else
-    strResult = tostring(nArg)
-  end
-  return strResult
-end
-
-function VikingNameplates:SetBarValue(wndBar, fMin, fValue, fMax)
-  wndBar:SetMax(fMax)
-  wndBar:SetFloor(fMin)
-  wndBar:SetProgress(fValue)
-end
-
-function VikingNameplates:HelperCalculateConValue(unitTarget)
-  if unitTarget == nil or self.unitPlayer == nil then
-    return 1
-  end
-
-  local nUnitCon = self.unitPlayer:GetLevelDifferential(unitTarget)
-
-  local nCon = 1 --default setting
-
-  if nUnitCon <= karConColors[1][1] then -- lower bound
-    nCon = 1
-  elseif nUnitCon >= karConColors[#karConColors][1] then -- upper bound
-    nCon = #karConColors
-  else
-    for idx = 2, (#karConColors - 1) do -- everything in between
-      if nUnitCon == karConColors[idx][1] then
-        nCon = idx
-      end
-    end
-  end
-
-  return nCon
-end
 
 -----------------------------------------------------------------------------------------------
--- Nameplate Events
+-- Cast Timer
 -----------------------------------------------------------------------------------------------
 
-function VikingNameplates:OnNameplateNameClick(wndHandler, wndCtrl, eMouseButton)
-  local tNameplate = self.arWnd2Nameplate[wndHandler:GetId()]
-  if tNameplate == nil then
-    return
-  end
-
-  local unitOwner = tNameplate.unitOwner
-  if GameLib.GetTargetUnit() ~= unitOwner and eMouseButton == GameLib.CodeEnumInputMouse.Left then
-    GameLib.SetTargetUnit(unitOwner)
-  end
+function VikingNameplates:OnCastPlayerFrameTimerTick()
+  self:UpdateCastTimer(self.tPlayerFrame)
 end
 
-function VikingNameplates:OnWorldLocationOnScreen(wndHandler, wndControl, bOnScreen)
-  local tNameplate = self.arWnd2Nameplate[wndHandler:GetId()]
-  if tNameplate ~= nil then
-    tNameplate.bOnScreen = bOnScreen
-    self:UpdateNameplateVisibility(tNameplate)
-  end
+
+function VikingNameplates:OnCastTargetFrameTimerTick()
+  self:UpdateCastTimer(self.tTargetFrame)
 end
 
-function VikingNameplates:OnUnitOcclusionChanged(wndHandler, wndControl, bOccluded)
-  local tNameplate = self.arWnd2Nameplate[wndHandler:GetId()]
-  if tNameplate ~= nil then
-    tNameplate.bOccluded = bOccluded
-    self:UpdateNameplateVisibility(tNameplate)
-  end
+function VikingNameplates:OnCastFocusFrameTimerTick()
+  self:UpdateCastTimer(self.tFocusFrame)
 end
 
------------------------------------------------------------------------------------------------
--- System Events
------------------------------------------------------------------------------------------------
+function VikingNameplates:UpdateCastTimer(tFrame)
+  local wndProgressBar = tFrame.wndCastBar:FindChild("ProgressBar")
+  local nMin = tFrame.unit:GetCastElapsed() or 0
+  local nTimeCurrent   = math.min(nMin, tFrame.nTimeMax)
+  wndProgressBar:SetProgress(nTimeCurrent, nTimeCurrent - tFrame.nTimePrevious * 1000)
 
-function VikingNameplates:OnUnitTextBubbleToggled(tUnitArg, strText, nRange)
-  local tNameplate = self.arUnit2Nameplate[tUnitArg:GetId()]
-  if tNameplate ~= nil then
-    tNameplate.bSpeechBubble = strText ~= nil and strText ~= ""
-    self:UpdateNameplateVisibility(tNameplate)
-  end
+  tFrame.nTimePrevious = nTimeCurrent
 end
 
-function VikingNameplates:OnEnteredCombat(unitChecked, bInCombat)
-  if unitChecked == self.unitPlayer then
-    self.bPlayerInCombat = bInCombat
-  end
+
+function VikingNameplates:KillCastTimer(tFrame)
+  tFrame.CastTimerTick:Stop()
+  local wndProgressBar = tFrame.wndCastBar:FindChild("ProgressBar")
+  wndProgressBar:SetProgress(tFrame.nTimeMax)
+  tFrame.wndCastBar:Show(false, .002)
 end
 
-function VikingNameplates:OnUnitGibbed(unitUpdated)
-  local tNameplate = self.arUnit2Nameplate[unitUpdated:GetId()]
-  if tNameplate ~= nil then
-    tNameplate.bGibbed = true
-    self:UpdateNameplateVisibility(tNameplate)
-  end
-end
 
-function VikingNameplates:OnUnitNameChanged(unitUpdated, strNewName)
-  local tNameplate = self.arUnit2Nameplate[unitUpdated:GetId()]
-  if tNameplate ~= nil then
-    self:DrawName(tNameplate)
-  end
-end
 
-function VikingNameplates:OnUnitTitleChanged(unitUpdated)
-  local tNameplate = self.arUnit2Nameplate[unitUpdated:GetId()]
-  if tNameplate ~= nil then
-    self:DrawName(tNameplate)
-  end
-end
 
-function VikingNameplates:OnPlayerTitleChanged()
-  local tNameplate = self.arUnit2Nameplate[self.unitPlayer:GetId()]
-  if tNameplate ~= nil then
-    self:DrawName(tNameplate)
-  end
-end
+---------------------------------------------------------------------------------------------------
+-- VikingSettings Functions
+---------------------------------------------------------------------------------------------------
 
-function VikingNameplates:OnUnitLevelChanged(unitUpdating)
-  local tNameplate = self.arUnit2Nameplate[unitUpdating:GetId()]
-  if tNameplate ~= nil then
-    self:DrawLevel(tNameplate)
-  end
-end
+function VikingNameplates:UpdateSettingsForm(wndContainer)
+  -- Text Style
+  wndContainer:FindChild("TextStyle:Content:Value"):SetCheck(self.db.textStyle["Value"])
+  wndContainer:FindChild("TextStyle:Content:Percent"):SetCheck(self.db.textStyle["Percent"])
 
-function VikingNameplates:OnGuildChange()
-  self.guildDisplayed = nil
-  self.guildWarParty = nil
-  for key, guildCurr in pairs(GuildLib.GetGuilds()) do
-    local eGuildType = guildCurr:GetType()
-    if eGuildType == GuildLib.GuildType_Guild then
-      self.guildDisplayed = guildCurr
-    end
-    if eGuildType == GuildLib.GuildType_WarParty then
-      self.guildWarParty = guildCurr
-    end
-  end
+  -- Bar colors
+  for strBarName, tBarColorData in pairs(self.db.colors) do
+    local wndColorContainer = wndContainer:FindChild("Colors:Content:" .. strBarName)
 
-  for key, tNameplate in pairs(self.arUnit2Nameplate) do
-    local unitOwner = tNameplate.unitOwner
-    tNameplate.bIsGuildMember = self.guildDisplayed and self.guildDisplayed:IsUnitMember(unitOwner) or false
-    tNameplate.bIsWarPartyMember = self.guildWarParty and self.guildWarParty:IsUnitMember(unitOwner) or false
-  end
-end
+    if wndColorContainer then
+      for strColorState, strColor in pairs(tBarColorData) do
+        local wndColor = wndColorContainer:FindChild(strColorState)
 
-function VikingNameplates:OnUnitGuildNameplateChanged(unitUpdated)
-  local tNameplate = self.arUnit2Nameplate[unitUpdated:GetId()]
-  if tNameplate ~= nil then
-    self:DrawGuild(tNameplate)
-  end
-end
-
-function VikingNameplates:OnUnitMemberOfGuildChange(unitOwner)
-  local tNameplate = self.arUnit2Nameplate[unitOwner:GetId()]
-  if tNameplate ~= nil then
-    self:DrawGuild(tNameplate)
-    tNameplate.bIsGuildMember = self.guildDisplayed and self.guildDisplayed:IsUnitMember(unitOwner) or false
-    tNameplate.bIsWarPartyMember = self.guildWarParty and self.guildWarParty:IsUnitMember(unitOwner) or false
-  end
-end
-
-function VikingNameplates:OnTargetUnitChanged(unitOwner) -- build targeted options here; we get this event when a creature attacks, too
-  for idx, tNameplateOther in pairs(self.arUnit2Nameplate) do
-    local bIsTarget = tNameplateOther.bIsTarget
-    local bIsCluster = tNameplateOther.bIsCluster
-
-    tNameplateOther.bIsTarget = false
-    tNameplateOther.bIsCluster = false
-
-    if bIsTarget or bIsCluster then
-      self:DrawName(tNameplateOther)
-      self:DrawGuild(tNameplateOther)
-      --self:DrawLevel(tNameplateOther)
-      self:UpdateNameplateRewardInfo(tNameplateOther)
-    end
-  end
-
-  if unitOwner == nil then
-    return
-  end
-
-  local tNameplate = self.arUnit2Nameplate[unitOwner:GetId()]
-  if tNameplate == nil then
-    return
-  end
-
-  if GameLib.GetTargetUnit() == unitOwner then
-    tNameplate.bIsTarget = true
-    self:DrawName(tNameplate)
-    self:DrawGuild(tNameplate)
-    --self:DrawLevel(tNameplate)
-    self:UpdateNameplateRewardInfo(tNameplate)
-
-    local tCluster = unitOwner:GetClusterUnits()
-    if tCluster ~= nil then
-      tNameplate.bIsCluster = true
-
-      for idx, unitCluster in pairs(tCluster) do
-        local tNameplateOther = self.arUnit2Nameplate[unitCluster:GetId()]
-        if tNameplateOther ~= nil then
-          tNameplateOther.bIsCluster = true
-        end
+        if wndColor then wndColor:SetBGColor(strColor) end
       end
     end
   end
 end
 
------------------------------------------------------------------------------------------------
--- Options
------------------------------------------------------------------------------------------------
-function VikingNameplates:OnConfigure()
-  self:OnVikingNameplatesOn()
+function VikingNameplates:OnTextStyleBtnCheck(wndHandler, wndControl, eMouseButton)
+  self.db.textStyle[wndControl:GetName()] = wndControl:IsChecked()
 end
 
-function VikingNameplates:OnVikingNameplatesOn()
-  local ePath = PlayerPathLib.GetPlayerPathType()
-  self.wndOptionsMain:FindChild("ShowRewardTypeMission"):FindChild("Icon"):SetSprite(karPathSprite[ePath])
-  self.wndMain:Show(true)
-  self:RefreshNameplatesConfigure()
+function VikingNameplates:OnSettingsBarColor( wndHandler, wndControl, eMouseButton )
+  VikingLib.Settings.ShowColorPickerForSetting(self.db.colors[wndControl:GetParent():GetName()], wndControl:GetName(), nil, wndControl)
 end
 
-function VikingNameplates:RefreshNameplatesConfigure()
-  -- Generic maanged controls
-  for property,tData in pairs(karSavedProperties) do
-    if tData.nControlType == 1 and self[property] ~= nil then
-      local wndControl = self.wndMain:FindChild(tData.strControlName)
-      if wndControl ~= nil then
-        wndControl:SetCheck(self[property])
-      end
-    end
-  end
-
-  --Draw distance
-  if self.nMaxRange ~= nil then
-    self.wndOptionsMain:FindChild("ShowOptionsBacker:DrawDistanceSlider"):SetValue(self.nMaxRange)
-    self.wndOptionsMain:FindChild("ShowOptionsBacker:DrawDistanceLabel"):SetText(String_GetWeaselString(Apollo.GetString("Nameplates_DrawDistance"), self.nMaxRange))
-  end
-  --Info panel
-  if self.bShowHealthMain ~= nil and self.bShowHealthMainDamaged ~= nil then self.wndMain:FindChild("MainShowHealthBarAlways"):SetCheck(self.bShowHealthMain and not self.bShowHealthMainDamaged) end
-  if self.bShowHealthMain ~= nil and self.bShowHealthMainDamaged ~= nil then self.wndMain:FindChild("MainShowHealthBarDamaged"):SetCheck(not self.bShowHealthMain and self.bShowHealthMainDamaged) end
-  if self.bShowHealthMain ~= nil and self.bShowHealthMainDamaged ~= nil then self.wndMain:FindChild("MainShowHealthBarNever"):SetCheck(not self.bShowHealthMain and not self.bShowHealthMainDamaged) end
-  --target components
-  if self.bHideInCombat ~= nil then self.wndMain:FindChild("MainHideInCombat"):SetCheck(self.bHideInCombat) end
-  if self.bShowMarkerTarget ~= nil then self.wndMain:FindChild("MainHideInCombatOff"):SetCheck(not self.bHideInCombat) end
-end
-
-function VikingNameplates:OnNormalViewCheck(wndHandler, wndCtrl)
-  self.wndMain:FindChild("ContentMain"):Show(true)
-  self.wndMain:FindChild("ContentTarget"):Show(false)
-end
-
-function VikingNameplates:OnTargetViewCheck(wndHandler, wndCtrl)
-  self.wndMain:FindChild("ContentMain"):Show(false)
-  self.wndMain:FindChild("ContentTarget"):Show(true)
-end
-
--- when the OK button is clicked
-function VikingNameplates:OnOK()
-  self.wndMain:Show(false) -- hide the window
-end
-
--- when the Cancel button is clicked
-function VikingNameplates:OnCancel()
-  self.wndMain:Show(false) -- hide the window
-end
-
-function VikingNameplates:OnDrawDistanceSlider(wndNameplate, wndHandler, nValue, nOldvalue)
-  self.wndOptionsMain:FindChild("DrawDistanceLabel"):SetText(String_GetWeaselString(Apollo.GetString("Nameplates_DrawDistance"), nValue))
-  self.nMaxRange = nValue-- set new constant, apply math
-end
-
-function VikingNameplates:OnMainShowHealthBarAlways(wndHandler, wndCtrl)
-  self:HelperOnMainShowHealthSettingChanged(true, false)
-end
-
-function VikingNameplates:OnMainShowHealthBarDamaged(wndHandler, wndCtrl)
-  self:HelperOnMainShowHealthSettingChanged(false, true)
-end
-
-function VikingNameplates:OnMainShowHealthBarNever(wndHandler, wndCtrl)
-  self:HelperOnMainShowHealthSettingChanged(false, false)
-end
-
-function VikingNameplates:HelperOnMainShowHealthSettingChanged(bShowHealthMain, bShowHealthMainDamaged)
-  self.bShowHealthMain = bShowHealthMain
-  self.bShowHealthMainDamaged = bShowHealthMainDamaged
-end
-
-function VikingNameplates:OnMainHideInCombat(wndHandler, wndCtrl)
-  self.bHideInCombat = wndCtrl:IsChecked() -- onDraw
-end
-
-function VikingNameplates:OnMainHideInCombatOff(wndHandler, wndCtrl)
-  self.bHideInCombat = not wndCtrl:IsChecked() -- onDraw
-end
-
-function VikingNameplates:OnGenericSingleCheck(wndHandler, wndControl, eMouseButton)
-  local strSettingName = wndControl:GetData()
-  if strSettingName ~= nil then
-    self[strSettingName] = wndControl:IsChecked()
-    local fnCallback = karSavedProperties[strSettingName].fnCallback
-    if fnCallback ~= nil then
-      self[fnCallback](self)
-    end
-  end
-end
-
-function VikingNameplates:OnSettingNameChanged()
-  for idx, tNameplate in pairs(self.arUnit2Nameplate) do
-    self:DrawName(tNameplate)
-  end
-end
-
-function VikingNameplates:OnSettingTitleChanged()
-  for idx, tNameplate in pairs(self.arUnit2Nameplate) do
-    self:DrawGuild(tNameplate)
-  end
-end
-
-function VikingNameplates:OnSettingHealthChanged()
-  for idx, tNameplate in pairs(self.arUnit2Nameplate) do
-    self:DrawLevel(tNameplate)
-  end
-end
-
-function VikingNameplates:OnSettingThreatIndicatorChanged()
-  for idx, tNameplate in pairs(self.arUnit2Nameplate) do
-    self:DrawThreatIndicator(tNameplate)
-  end
-end
-
-function VikingNameplates:OnSettingInterruptChanged()
-  for idx, tNameplate in pairs(self.arUnit2Nameplate) do
-    self:DrawInterrupt(tNameplate)
-  end
-end
-
------------------------------------------------------------------------------------------------
--- VikingNameplates Instance
------------------------------------------------------------------------------------------------
-local VikingNameplatesInst = VikingNameplates:new()
-VikingNameplatesInst:Init()
+local VikingUnitFramesInst = VikingNameplates:new()
+VikingUnitFramesInst:Init()
