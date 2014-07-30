@@ -183,6 +183,7 @@ local karSavedProperties =
   --Info panel
   ["bShowHealthMain"] = { default=false, nControlType=0, fnCallback="OnSettingHealthChanged" },
   ["bShowHealthMainDamaged"] = { default=true, nControlType=0, fnCallback="OnSettingHealthChanged" },
+  ["bShowShieldMainDamaged"] = { default=true, nControlType=1, strControlName="MainShowShieldBarDamaged" },
   --target components
   ["bShowMarkerTarget"] = { default=true, nControlType=1, strControlName="TargetedShowMarker" },
   ["bShowNameTarget"] = { default=true, nControlType=1, strControlName="TargetedShowName", fnCallback="OnSettingNameChanged" },
@@ -716,7 +717,12 @@ function VikingNameplates:DrawHealth(tNameplate)
     if self.bShowHealthMain then
       self:ToggleNamePlatesVisiblity(tNameplate, true)
     elseif self.bShowHealthMainDamaged then
-      self:ToggleNamePlatesVisiblity(tNameplate, unitOwner:GetHealth() ~= unitOwner:GetMaxHealth())
+      local bShow = false
+      bShow = unitOwner:GetHealth() ~= unitOwner:GetMaxHealth()
+      if self.bShowShieldMainDamaged then
+        bShow = bShow or unitOwner:GetShieldCapacity() ~= unitOwner:GetShieldCapacityMax()
+      end
+      self:ToggleNamePlatesVisiblity(tNameplate, bShow)
     else
       self:ToggleNamePlatesVisiblity(tNameplate, false)
     end
@@ -1343,6 +1349,7 @@ function VikingNameplates:RefreshNameplatesConfigure()
   if self.bShowHealthMain ~= nil and self.bShowHealthMainDamaged ~= nil then self.wndMain:FindChild("MainShowHealthBarAlways"):SetCheck(self.bShowHealthMain and not self.bShowHealthMainDamaged) end
   if self.bShowHealthMain ~= nil and self.bShowHealthMainDamaged ~= nil then self.wndMain:FindChild("MainShowHealthBarDamaged"):SetCheck(not self.bShowHealthMain and self.bShowHealthMainDamaged) end
   if self.bShowHealthMain ~= nil and self.bShowHealthMainDamaged ~= nil then self.wndMain:FindChild("MainShowHealthBarNever"):SetCheck(not self.bShowHealthMain and not self.bShowHealthMainDamaged) end
+  if self.bShowShieldMainDamaged ~= nil then self.wndMain:FindChild("MainShowShieldBarDamaged"):SetCheck(self.bShowShieldMainDamaged) end
   --target components
   if self.bHideInCombat ~= nil then self.wndMain:FindChild("MainHideInCombat"):SetCheck(self.bHideInCombat) end
   if self.bShowMarkerTarget ~= nil then self.wndMain:FindChild("MainHideInCombatOff"):SetCheck(not self.bHideInCombat) end
@@ -1437,6 +1444,18 @@ function VikingNameplates:OnSettingInterruptChanged()
   for idx, tNameplate in pairs(self.arUnit2Nameplate) do
     self:DrawInterrupt(tNameplate)
   end
+end
+
+---------------------------------------------------------------------------------------------------
+-- StandardModule Functions
+---------------------------------------------------------------------------------------------------
+
+function VikingNameplates:OnShowDamagedShieldUnchecked( wndHandler, wndControl, eMouseButton )
+  self.bShowShieldMainDamaged = false
+end
+
+function VikingNameplates:OnShowDamagedShieldChecked( wndHandler, wndControl, eMouseButton )
+  self.bShowShieldMainDamaged = true
 end
 
 -----------------------------------------------------------------------------------------------
