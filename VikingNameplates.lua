@@ -862,10 +862,10 @@ function VikingNameplates:CheckDrawDistance(tNameplate)
       return false
   end
 
-  tPosTarget = unitOwner:GetPosition()
-  tPosPlayer = unitPlayer:GetPosition()
+  local tPosTarget = unitOwner:GetPosition()
+  local tPosPlayer = unitPlayer:GetPosition()
 
-  if tPosTarget == nil then
+  if tPosTarget == nil or tPosPlayer == nil then
     return
   end
 
