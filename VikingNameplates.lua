@@ -487,7 +487,7 @@ function VikingNameplates:OnUnitCreated(unitNew) -- build main options here
       healthAbsorbFill = wnd:FindChild("Container:Health:HealthBars:MaxAbsorb:AbsorbFill"),
       healthMaxHealth = wnd:FindChild("Container:Health:HealthBars:MaxHealth"),
       --healthHealthLabel = wnd:FindChild("Container:Health:HealthLabel"),
-      --castBarLabel = wnd:FindChild("Container:CastBar:Label"),
+      castBarLabel = wnd:FindChild("Container:CastBar:Label"),
       castBarCastFill = wnd:FindChild("Container:CastBar:CastFill"),
       vulnerableVulnFill = wnd:FindChild("Container:Vulnerable:VulnFill"),
       questRewards = wnd:FindChild("NameRewardContainer:RewardContainer:QuestRewards"),
@@ -747,7 +747,8 @@ function VikingNameplates:DrawCastBar(tNameplate)
 
   wndCastBar:Show(bShow)
   if bShow then
-    --tNameplate.wnd.castBarLabel:SetText(unitOwner:GetCastName())
+    print(unitOwner:GetCastName())
+    tNameplate.wnd.castBarLabel:SetText(unitOwner:GetCastName())
     tNameplate.wnd.castBarCastFill:SetMax(unitOwner:GetCastDuration())
     tNameplate.wnd.castBarCastFill:SetProgress(unitOwner:GetCastElapsed())
   end
