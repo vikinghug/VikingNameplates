@@ -168,6 +168,7 @@ local karSavedProperties =
   ["bShowTitle"] = { default=true, nControlType=1, strControlName="IndividualShowAffiliation", fnCallback="OnSettingTitleChanged" },
   ["bShowCertainDeathMain"] = { default=true, nControlType=1, strControlName="IndividualShowCertainDeath" },
   ["bShowCastBarMain"] = { default=false, nControlType=1, strControlName="IndividualShowCastBar" },
+  ["bShowCastBarSpellMain"] = { default=false, nControlType=1, strControlName="IndividualShowCastBarSpell" },
   ["bShowRewardsMain"] = { default=true, nControlType=1, strControlName="IndividualShowRewardIcons", fnCallback="UpdateAllNameplateRewards" },
   ["bShowThreatIndicator"] = { default=false, nControlType=1, strControlName="IndividualShowThreatIndicator", fnCallback="OnSettingThreatIndicatorChanged" },
   ["bShowInterrupt"] = { default=false, nControlType=1, strControlName="IndividualShowInterrupt", fnCallback="OnSettingInterruptChanged" },
@@ -191,6 +192,7 @@ local karSavedProperties =
   ["bShowHealthTarget"] = { default=true, nControlType=1, strControlName="TargetedShowHealth", fnCallback="OnSettingHealthChanged" },
   ["bShowRangeTarget"] = { default=false, nControlType=0 },
   ["bShowCastBarTarget"] = { default=true, nControlType=1, strControlName="TargetedShowCastBar" },
+  ["bShowCastBarSpellTarget"] = { default=true, nControlType=1, strControlName="TargetedShowCastBarSpell" },
   --Non-targeted nameplates in combat
   ["bHideInCombat"] = { default=false, nControlType=0 }
 }
@@ -734,6 +736,7 @@ end
 function VikingNameplates:DrawCastBar(tNameplate)
   local wndNameplate = tNameplate.wndNameplate
   local unitOwner = tNameplate.unitOwner
+  local playerUnit = GameLib:GetPlayerUnit()
 
   -- Casting; has some onDraw parameters we need to check
   tNameplate.bIsCasting = unitOwner:ShouldShowCastBar()
@@ -747,8 +750,12 @@ function VikingNameplates:DrawCastBar(tNameplate)
 
   wndCastBar:Show(bShow)
   if bShow then
-    print(unitOwner:GetCastName())
-    tNameplate.wnd.castBarLabel:SetText(unitOwner:GetCastName())
+    local bShowName = (self.bShowCastBarSpellMain == true and unitOwner == playerUnit) or (self.bShowCastBarSpellTarget == true and unitOwner ~= playerUnit)
+    if bShowName then
+      tNameplate.wnd.castBarLabel:SetText(unitOwner:GetCastName())
+    else
+      tNameplate.wnd.castBarLabel:SetText(nil)
+    end
     tNameplate.wnd.castBarCastFill:SetMax(unitOwner:GetCastDuration())
     tNameplate.wnd.castBarCastFill:SetProgress(unitOwner:GetCastElapsed())
   end
