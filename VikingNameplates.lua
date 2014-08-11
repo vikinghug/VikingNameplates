@@ -736,7 +736,7 @@ end
 function VikingNameplates:DrawCastBar(tNameplate)
   local wndNameplate = tNameplate.wndNameplate
   local unitOwner = tNameplate.unitOwner
-  local playerUnit = GameLib:GetPlayerUnit()
+  local targetUnit = GameLib:GetTargetUnit()
 
   -- Casting; has some onDraw parameters we need to check
   tNameplate.bIsCasting = unitOwner:ShouldShowCastBar()
@@ -750,7 +750,7 @@ function VikingNameplates:DrawCastBar(tNameplate)
 
   wndCastBar:Show(bShow)
   if bShow then
-    local bShowName = (self.bShowCastBarSpellMain == true and unitOwner == playerUnit) or (self.bShowCastBarSpellTarget == true and unitOwner ~= playerUnit)
+    local bShowName = self.bShowCastBarSpellMain == true or (self.bShowCastBarSpellTarget == true and unitOwner == targetUnit)
     if bShowName then
       tNameplate.wnd.castBarLabel:SetText(unitOwner:GetCastName())
     else
