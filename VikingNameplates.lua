@@ -28,8 +28,6 @@ local VikingNameplates = {}
 -- VikingNameplates_GuildDisplay
 
 -- Disabled DrawLevel as it isn't currently being used
--- Disabled castBarLabel as it isn't currently being used
--- Disabled healthHealthLabel as it isn't currently being used
 
 -----------------------------------------------------------------------------------------------
 -- Constants
@@ -172,6 +170,7 @@ local karSavedProperties =
   ["bShowRewardsMain"] = { default=true, nControlType=1, strControlName="IndividualShowRewardIcons", fnCallback="UpdateAllNameplateRewards" },
   ["bShowThreatIndicator"] = { default=false, nControlType=1, strControlName="IndividualShowThreatIndicator", fnCallback="OnSettingThreatIndicatorChanged" },
   ["bShowInterrupt"] = { default=false, nControlType=1, strControlName="IndividualShowInterrupt", fnCallback="OnSettingInterruptChanged" },
+  ["bShowHealthTextMain"] = { default=false, nControlType=1, strControlName="IndividualShowHealthText" },
   --Reward icons
   ["bShowRewardTypeQuest"] = { default=true, nControlType=1, strControlName="ShowRewardTypeQuest", fnCallback="UpdateAllNameplateRewards" },
   ["bShowRewardTypeMission"] = { default=true, nControlType=1, strControlName="ShowRewardTypeMission", fnCallback="UpdateAllNameplateRewards" },
@@ -193,6 +192,7 @@ local karSavedProperties =
   ["bShowRangeTarget"] = { default=false, nControlType=0 },
   ["bShowCastBarTarget"] = { default=true, nControlType=1, strControlName="TargetedShowCastBar" },
   ["bShowCastBarSpellTarget"] = { default=true, nControlType=1, strControlName="TargetedShowCastBarSpell" },
+  ["bShowHealthTextTarget"] = { default=false, nControlType=1, strControlName="TargetedShowHealthText" },
   --Non-targeted nameplates in combat
   ["bHideInCombat"] = { default=false, nControlType=0 }
 }
@@ -488,7 +488,7 @@ function VikingNameplates:OnUnitCreated(unitNew) -- build main options here
       healthMaxAbsorb = wnd:FindChild("Container:Health:HealthBars:MaxAbsorb"),
       healthAbsorbFill = wnd:FindChild("Container:Health:HealthBars:MaxAbsorb:AbsorbFill"),
       healthMaxHealth = wnd:FindChild("Container:Health:HealthBars:MaxHealth"),
-      --healthHealthLabel = wnd:FindChild("Container:Health:HealthLabel"),
+      healthHealthLabel = wnd:FindChild("Container:Health:HealthLabel"),
       castBarLabel = wnd:FindChild("Container:CastBar:Label"),
       castBarCastFill = wnd:FindChild("Container:CastBar:CastFill"),
       vulnerableVulnFill = wnd:FindChild("Container:Vulnerable:VulnFill"),
@@ -988,7 +988,7 @@ function VikingNameplates:HelperDoHealthShieldBar(wndHealth, unitOwner, eDisposi
   local nVulnerabilityTime = unitOwner:GetCCStateTimeRemaining(Unit.CodeEnumCCState.Vulnerability)
 
   if unitOwner:GetType() == "Simple" or unitOwner:GetHealth() == nil then
-    --tNameplate.wnd.healthHealthLabel:SetText("")
+    tNameplate.wnd.healthHealthLabel:SetText("")
     return
   end
 
@@ -1080,7 +1080,16 @@ function VikingNameplates:HelperDoHealthShieldBar(wndHealth, unitOwner, eDisposi
   if nShieldMax > 0 and nShieldCurr > 0 then
     strText = String_GetWeaselString(Apollo.GetString("TargetFrame_HealthShieldText"), strText, strShieldCurr)
   end
-  --tNameplate.wnd.healthHealthLabel:SetText(strText)
+  
+  local targetUnit = GameLib:GetTargetUnit()
+  local bShowText = self.bShowHealthTextMain == true or (self.bShowHealthTextTarget == true and unitOwner == targetUnit)
+  if bShowText then
+    tNameplate.wnd.healthHealthLabel:Show(nHealthCurr > 0)
+    tNameplate.wnd.healthHealthLabel:SetText(strText)
+  else
+    Nameplate.wnd.healthHealthLabel:Show(false)
+    tNameplate.wnd.healthHealthLabel:SetText("")
+  end
 
   --[[
   elseif nHealthCurr / nHealthMax < .3 then
