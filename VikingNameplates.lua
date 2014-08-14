@@ -508,6 +508,7 @@ function VikingNameplates:OnUnitCreated(unitNew) -- build main options here
   self:UpdateNameplateRewardInfo(tNameplate)
   self:DrawRewards(tNameplate)
   self:DrawThreatIndicator(tNameplate)
+  self:DrawTargeting(tNameplate)
   self:DrawInterrupt(tNameplate)
 end
 
@@ -566,6 +567,7 @@ function VikingNameplates:DrawNameplate(tNameplate)
   self:DrawVulnerable(tNameplate)
   self:ColorNameplate(tNameplate)
   self:DrawThreatIndicator(tNameplate)
+  self:DrawTargeting(tNameplate)
   self:DrawInterrupt(tNameplate)
 end
 
@@ -811,13 +813,17 @@ function VikingNameplates:DrawRewards(tNameplate)
   end
 end
 
-function VikingNameplates:DrawTargeting(tVikingNameplates)
+function VikingNameplates:DrawTargeting(tNameplate)
+  if tNameplate == nil then
+    return
+  end
+  
   local wndNameplate = tNameplate.wndNameplate
   local unitOwner = tNameplate.unitOwner
 
   local bUseTarget = tNameplate.bIsTarget
 
-  local bShowTargetMarkerArrow = bUseTarget and self.bShowMarkerTarget and not tVikingNameplates.wnd.health:IsShown()
+  local bShowTargetMarkerArrow = bUseTarget and self.bShowMarkerTarget
   tNameplate.wnd.targetMarkerArrow:SetSprite(karDisposition.tTargetSecondary[tNameplate.eDisposition])
   tNameplate.wnd.targetMarkerArrow:Show(bShowTargetMarkerArrow, not bShowTargetMarkerArrow)
 end
