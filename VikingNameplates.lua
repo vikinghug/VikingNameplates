@@ -1087,7 +1087,7 @@ function VikingNameplates:HelperDoHealthShieldBar(wndHealth, unitOwner, eDisposi
     tNameplate.wnd.healthHealthLabel:Show(nHealthCurr > 0)
     tNameplate.wnd.healthHealthLabel:SetText(strText)
   else
-    Nameplate.wnd.healthHealthLabel:Show(false)
+    tNameplate.wnd.healthHealthLabel:Show(false)
     tNameplate.wnd.healthHealthLabel:SetText("")
   end
 
