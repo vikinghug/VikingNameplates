@@ -823,7 +823,7 @@ function VikingNameplates:DrawTargeting(tNameplate)
   if tNameplate == nil then
     return
   end
-  
+
   local wndNameplate = tNameplate.wndNameplate
   local unitOwner = tNameplate.unitOwner
 
@@ -1092,7 +1092,7 @@ function VikingNameplates:HelperDoHealthShieldBar(wndHealth, unitOwner, eDisposi
   if nShieldMax > 0 and nShieldCurr > 0 then
     strText = String_GetWeaselString(Apollo.GetString("TargetFrame_HealthShieldText"), strText, strShieldCurr)
   end
-  
+
   local targetUnit = GameLib:GetTargetUnit()
   local bShowText = self.bShowHealthTextMain == true or (self.bShowHealthTextTarget == true and unitOwner == targetUnit)
   if bShowText then
@@ -1252,7 +1252,7 @@ end
 function VikingNameplates:OnUnitLevelChanged(unitUpdating)
   local tNameplate = self.arUnit2Nameplate[unitUpdating:GetId()]
   if tNameplate ~= nil then
-    self:DrawLevel(tNameplate)
+    self:DrawNameAndLevel(tNameplate)
   end
 end
 
