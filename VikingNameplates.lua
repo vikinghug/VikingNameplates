@@ -27,10 +27,6 @@ local VikingNameplates = {}
 -- TODO Delete strings:
 -- VikingNameplates_GuildDisplay
 
--- Disabled DrawLevel as it isn't currently being used
--- Disabled castBarLabel as it isn't currently being used
--- Disabled healthHealthLabel as it isn't currently being used
-
 -----------------------------------------------------------------------------------------------
 -- Constants
 -----------------------------------------------------------------------------------------------
@@ -172,6 +168,8 @@ local karSavedProperties =
   ["bShowRewardsMain"] = { default=true, nControlType=1, strControlName="IndividualShowRewardIcons", fnCallback="UpdateAllNameplateRewards" },
   ["bShowThreatIndicator"] = { default=false, nControlType=1, strControlName="IndividualShowThreatIndicator", fnCallback="OnSettingThreatIndicatorChanged" },
   ["bShowInterrupt"] = { default=false, nControlType=1, strControlName="IndividualShowInterrupt", fnCallback="OnSettingInterruptChanged" },
+  ["bShowHealthTextMain"] = { default=false, nControlType=1, strControlName="IndividualShowHealthText" },
+  ["bShowLevelMain"] = { default=false, nControlType=1, strControlName="IndividualShowLevel", fnCallback="OnSettingLevelChanged" },
   --Reward icons
   ["bShowRewardTypeQuest"] = { default=true, nControlType=1, strControlName="ShowRewardTypeQuest", fnCallback="UpdateAllNameplateRewards" },
   ["bShowRewardTypeMission"] = { default=true, nControlType=1, strControlName="ShowRewardTypeMission", fnCallback="UpdateAllNameplateRewards" },
@@ -193,6 +191,8 @@ local karSavedProperties =
   ["bShowRangeTarget"] = { default=false, nControlType=0 },
   ["bShowCastBarTarget"] = { default=true, nControlType=1, strControlName="TargetedShowCastBar" },
   ["bShowCastBarSpellTarget"] = { default=true, nControlType=1, strControlName="TargetedShowCastBarSpell" },
+  ["bShowHealthTextTarget"] = { default=false, nControlType=1, strControlName="TargetedShowHealthText" },
+  ["bShowLevelTarget"] = { default=false, nControlType=1, strControlName="TargetedShowLevel", fnCallback="OnSettingLevelChanged" },
   --Non-targeted nameplates in combat
   ["bHideInCombat"] = { default=false, nControlType=0 }
 }
@@ -265,7 +265,7 @@ function VikingNameplates:OnDocumentReady()
   Apollo.RegisterEventHandler("UnitTitleChanged",       "OnUnitTitleChanged", self)
   Apollo.RegisterEventHandler("PlayerTitleChange",      "OnPlayerTitleChanged", self)
   Apollo.RegisterEventHandler("UnitGuildNameplateChanged",  "OnUnitGuildNameplateChanged",self)
-  --Apollo.RegisterEventHandler("UnitLevelChanged",       "OnUnitLevelChanged", self)
+  Apollo.RegisterEventHandler("UnitLevelChanged",       "OnUnitLevelChanged", self)
   Apollo.RegisterEventHandler("UnitMemberOfGuildChange",    "OnUnitMemberOfGuildChange", self)
   Apollo.RegisterEventHandler("GuildChange",          "OnGuildChange", self)
   Apollo.RegisterEventHandler("UnitGibbed",         "OnUnitGibbed", self)
@@ -476,7 +476,6 @@ function VikingNameplates:OnUnitCreated(unitNew) -- build main options here
       background = wnd:FindChild("Container:BackgroundContainer"),
       castBar = wnd:FindChild("Container:CastBar"),
       vulnerable = wnd:FindChild("Container:Vulnerable"),
-      level = wnd:FindChild("Container:Health:Level"),
       guild = wnd:FindChild("Guild"),
       name = wnd:FindChild("NameRewardContainer:Name"),
       certainDeath = wnd:FindChild("TargetAndDeathContainer:CertainDeath"),
@@ -488,7 +487,7 @@ function VikingNameplates:OnUnitCreated(unitNew) -- build main options here
       healthMaxAbsorb = wnd:FindChild("Container:Health:HealthBars:MaxAbsorb"),
       healthAbsorbFill = wnd:FindChild("Container:Health:HealthBars:MaxAbsorb:AbsorbFill"),
       healthMaxHealth = wnd:FindChild("Container:Health:HealthBars:MaxHealth"),
-      --healthHealthLabel = wnd:FindChild("Container:Health:HealthLabel"),
+      healthHealthLabel = wnd:FindChild("Container:Health:HealthLabel"),
       castBarLabel = wnd:FindChild("Container:CastBar:Label"),
       castBarCastFill = wnd:FindChild("Container:CastBar:CastFill"),
       vulnerableVulnFill = wnd:FindChild("Container:Vulnerable:VulnFill"),
@@ -502,12 +501,13 @@ function VikingNameplates:OnUnitCreated(unitNew) -- build main options here
   self.arUnit2Nameplate[idUnit] = tNameplate
   self.arWnd2Nameplate[wnd:GetId()] = tNameplate
 
-  self:DrawName(tNameplate)
+  self:DrawNameAndLevel(tNameplate)
   self:DrawGuild(tNameplate)
-  self:DrawLevel(tNameplate)
+  --self:DrawLevel(tNameplate)
   self:UpdateNameplateRewardInfo(tNameplate)
   self:DrawRewards(tNameplate)
   self:DrawThreatIndicator(tNameplate)
+  self:DrawTargeting(tNameplate)
   self:DrawInterrupt(tNameplate)
 end
 
@@ -566,7 +566,9 @@ function VikingNameplates:DrawNameplate(tNameplate)
   self:DrawVulnerable(tNameplate)
   self:ColorNameplate(tNameplate)
   self:DrawThreatIndicator(tNameplate)
+  self:DrawTargeting(tNameplate)
   self:DrawInterrupt(tNameplate)
+  --self:DrawLevel(tNameplate)
 end
 
 function VikingNameplates:ColorNameplate(tNameplate)
@@ -628,13 +630,16 @@ function VikingNameplates:ColorNameplate(tNameplate)
   tNameplate.wnd.guild:SetTextColor(crColorToUse)
 end
 
-function VikingNameplates:DrawName(tNameplate)
+function VikingNameplates:DrawNameAndLevel(tNameplate)
   local wndNameplate = tNameplate.wndNameplate
   local unitOwner = tNameplate.unitOwner
-
+  local targetUnit = GameLib:GetTargetUnit()
   local wndName = tNameplate.wnd.name
   local bUseTarget = tNameplate.bIsTarget
   local bShow = self.bShowNameMain
+  local sLevelText = unitOwner:GetLevel() or "--"
+  local bShowLevel = self.bShowLevelMain == true or (self.bShowLevelTarget == true and unitOwner == targetUnit)
+
   if bUseTarget then
     bShow = self.bShowNameTarget
   end
@@ -644,10 +649,19 @@ function VikingNameplates:DrawName(tNameplate)
   end
   if bShow then
     local strNewName
-    if self.bShowTitle then
-      strNewName = unitOwner:GetTitleOrName()
+    if bShowLevel then
+      local sLevelText = unitOwner:GetLevel() or "-"
+      if self.bShowTitle then
+        strNewName = unitOwner:GetTitleOrName() .. " - " .. sLevelText
+      else
+        strNewName = unitOwner:GetName() .. " - " .. sLevelText
+      end
     else
-      strNewName = unitOwner:GetName()
+      if self.bShowTitle then
+        strNewName = unitOwner:GetTitleOrName()
+      else
+        strNewName = unitOwner:GetName()
+      end
     end
 
     if wndName:GetText() ~= strNewName then
@@ -692,12 +706,6 @@ function VikingNameplates:DrawGuild(tNameplate)
     wndGuild:Show(bShow)
     wndNameplate:ArrangeChildrenVert(2)
   end
-end
-
-function VikingNameplates:DrawLevel(tNameplate)
-  local unitOwner = tNameplate.unitOwner
-
-  tNameplate.wnd.level:SetText(unitOwner:GetLevel() or "-")
 end
 
 function VikingNameplates:DrawHealth(tNameplate)
@@ -811,13 +819,17 @@ function VikingNameplates:DrawRewards(tNameplate)
   end
 end
 
-function VikingNameplates:DrawTargeting(tVikingNameplates)
+function VikingNameplates:DrawTargeting(tNameplate)
+  if tNameplate == nil then
+    return
+  end
+
   local wndNameplate = tNameplate.wndNameplate
   local unitOwner = tNameplate.unitOwner
 
   local bUseTarget = tNameplate.bIsTarget
 
-  local bShowTargetMarkerArrow = bUseTarget and self.bShowMarkerTarget and not tVikingNameplates.wnd.health:IsShown()
+  local bShowTargetMarkerArrow = bUseTarget and self.bShowMarkerTarget
   tNameplate.wnd.targetMarkerArrow:SetSprite(karDisposition.tTargetSecondary[tNameplate.eDisposition])
   tNameplate.wnd.targetMarkerArrow:Show(bShowTargetMarkerArrow, not bShowTargetMarkerArrow)
 end
@@ -988,7 +1000,7 @@ function VikingNameplates:HelperDoHealthShieldBar(wndHealth, unitOwner, eDisposi
   local nVulnerabilityTime = unitOwner:GetCCStateTimeRemaining(Unit.CodeEnumCCState.Vulnerability)
 
   if unitOwner:GetType() == "Simple" or unitOwner:GetHealth() == nil then
-    --tNameplate.wnd.healthHealthLabel:SetText("")
+    tNameplate.wnd.healthHealthLabel:SetText("")
     return
   end
 
@@ -1080,7 +1092,16 @@ function VikingNameplates:HelperDoHealthShieldBar(wndHealth, unitOwner, eDisposi
   if nShieldMax > 0 and nShieldCurr > 0 then
     strText = String_GetWeaselString(Apollo.GetString("TargetFrame_HealthShieldText"), strText, strShieldCurr)
   end
-  --tNameplate.wnd.healthHealthLabel:SetText(strText)
+
+  local targetUnit = GameLib:GetTargetUnit()
+  local bShowText = self.bShowHealthTextMain == true or (self.bShowHealthTextTarget == true and unitOwner == targetUnit)
+  if bShowText then
+    tNameplate.wnd.healthHealthLabel:Show(nHealthCurr > 0)
+    tNameplate.wnd.healthHealthLabel:SetText(strText)
+  else
+    tNameplate.wnd.healthHealthLabel:Show(false)
+    tNameplate.wnd.healthHealthLabel:SetText("")
+  end
 
   --[[
   elseif nHealthCurr / nHealthMax < .3 then
@@ -1210,28 +1231,28 @@ end
 function VikingNameplates:OnUnitNameChanged(unitUpdated, strNewName)
   local tNameplate = self.arUnit2Nameplate[unitUpdated:GetId()]
   if tNameplate ~= nil then
-    self:DrawName(tNameplate)
+    self:DrawNameAndLevel(tNameplate)
   end
 end
 
 function VikingNameplates:OnUnitTitleChanged(unitUpdated)
   local tNameplate = self.arUnit2Nameplate[unitUpdated:GetId()]
   if tNameplate ~= nil then
-    self:DrawName(tNameplate)
+    self:DrawNameAndLevel(tNameplate)
   end
 end
 
 function VikingNameplates:OnPlayerTitleChanged()
   local tNameplate = self.arUnit2Nameplate[self.unitPlayer:GetId()]
   if tNameplate ~= nil then
-    self:DrawName(tNameplate)
+    self:DrawNameAndLevel(tNameplate)
   end
 end
 
 function VikingNameplates:OnUnitLevelChanged(unitUpdating)
   local tNameplate = self.arUnit2Nameplate[unitUpdating:GetId()]
   if tNameplate ~= nil then
-    self:DrawLevel(tNameplate)
+    self:DrawNameAndLevel(tNameplate)
   end
 end
 
@@ -1280,7 +1301,7 @@ function VikingNameplates:OnTargetUnitChanged(unitOwner) -- build targeted optio
     tNameplateOther.bIsCluster = false
 
     if bIsTarget or bIsCluster then
-      self:DrawName(tNameplateOther)
+      self:DrawNameAndLevel(tNameplateOther)
       self:DrawGuild(tNameplateOther)
       --self:DrawLevel(tNameplateOther)
       self:UpdateNameplateRewardInfo(tNameplateOther)
@@ -1298,7 +1319,7 @@ function VikingNameplates:OnTargetUnitChanged(unitOwner) -- build targeted optio
 
   if GameLib.GetTargetUnit() == unitOwner then
     tNameplate.bIsTarget = true
-    self:DrawName(tNameplate)
+    self:DrawNameAndLevel(tNameplate)
     self:DrawGuild(tNameplate)
     --self:DrawLevel(tNameplate)
     self:UpdateNameplateRewardInfo(tNameplate)
@@ -1419,7 +1440,13 @@ end
 
 function VikingNameplates:OnSettingNameChanged()
   for idx, tNameplate in pairs(self.arUnit2Nameplate) do
-    self:DrawName(tNameplate)
+    self:DrawNameAndLevel(tNameplate)
+  end
+end
+
+function VikingNameplates:OnSettingLevelChanged()
+  for idx, tNameplate in pairs(self.arUnit2Nameplate) do
+    self:DrawNameAndLevel(tNameplate)
   end
 end
 
@@ -1431,7 +1458,7 @@ end
 
 function VikingNameplates:OnSettingHealthChanged()
   for idx, tNameplate in pairs(self.arUnit2Nameplate) do
-    self:DrawLevel(tNameplate)
+    --self:DrawLevel(tNameplate)
   end
 end
 
